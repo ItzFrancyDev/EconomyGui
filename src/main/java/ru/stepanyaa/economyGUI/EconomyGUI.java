@@ -24,6 +24,7 @@
  */
 package ru.stepanyaa.economyGUI;
 
+import com.tcoded.folialib.FoliaLib;
 import lombok.Getter;
 import lombok.Setter;
 import net.milkbowl.vault.economy.Economy;
@@ -42,6 +43,8 @@ public class EconomyGUI extends JavaPlugin {
 	private static EconomyGUI instance;
     @Getter
     private static MessageUtil messageUtil;
+    @Getter
+    private static FoliaLib foliaLib;
 	@Getter
 	private CommonUtil common;
     @Getter
@@ -72,6 +75,7 @@ public class EconomyGUI extends JavaPlugin {
     @Override
     public void onEnable() {
     	instance = this;
+        foliaLib = new FoliaLib(this);
     	CURRENT_VERSION = getDescription().getVersion();
         if (!setupEconomy()) {
             getLogger().severe(messageUtil.getMessage("warning.no-economy", "Economy provider not found! Disabling plugin."));
@@ -82,8 +86,14 @@ public class EconomyGUI extends JavaPlugin {
         
         //CONFIG INIT
         saveDefaultConfig();
-        common.updateConfigFile();
         reloadConfig();
+
+        //MESSAGES
+        messageUtil = new MessageUtil();
+        if (messageUtil.init()) return;
+
+        //CONFIG UPDATE
+        common.updateConfigFile();
         
         //CONFIG READ
         language = getConfig().getString("language", "en");
@@ -92,11 +102,7 @@ public class EconomyGUI extends JavaPlugin {
         quickActionsEnabled = getConfig().getBoolean("features.quick-actions", true);
         fullManagementEnabled = getConfig().getBoolean("features.full-management", true);
         transactionRetentionDays = getConfig().getInt("features.transaction-retention-days", 30);
-        
-        //MESSAGES
-        messageUtil = new MessageUtil();
-        if (messageUtil.init()) return;
-        
+
         //WARNING: FUCTION LIMITED
         if (!playerSelectionEnabled && !massOperationsEnabled && !quickActionsEnabled && !fullManagementEnabled) {
             getLogger().warning(messageUtil.getMessage("error.all-features-disabled", "All features are disabled in config! Commands will be limited."));

@@ -2,7 +2,7 @@ name: EconomyGUI
 version: 1.0.3
 main: ru.stepanyaa.economyGUI.EconomyGUI
 license: MIT
-folia-supported: false
+folia-supported: true
 api-version: 1.16
 depend: [Vault]
 softdepend: [Essentials, PlaceholderAPI]

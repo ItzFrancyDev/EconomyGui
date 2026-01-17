@@ -6,17 +6,18 @@ Tired of cumbersome economy commands? EconomyGUI provides server admins with a m
 
 ---
 
-## **🚨 REQUIRED: YOU MUST INSTALL [Vault](https://www.spigotmc.org/resources/vault.34315/) AND [EssentialsX](https://essentialsx.net/downloads.html) FOR THIS PLUGIN TO WORK! 🚨**
+## **🚨 REQUIRED: YOU MUST INSTALL [Vault](https://www.spigotmc.org/resources/vault.34315/)/[VaultUnlocked](https://modrinth.com/plugin/vaultunlocked/) AND [EssentialsX](https://essentialsx.net/downloads.html) FOR THIS PLUGIN TO WORK! 🚨**
 
 ---
 
  **✅ Supported Platforms & Versions**
 *   **Tested and working on:**
 
-    ![Paper](https://img.shields.io/badge/Paper-1.16.1%E2%80%931.21.10-success&logo=minecraft)     
-    ![Spigot](https://img.shields.io/badge/Spigot-1.16.1%E2%80%931.21.10-success&logo=minecraft)   
-    ![Purpur](https://img.shields.io/badge/Purpur-1.16.1%E2%80%931.21.10-success&logo=minecraft)
-*   **Folia Not Supported!** ❌
+    ![Paper](https://img.shields.io/badge/Paper-1.16.1%E2%80%931.21.11-success&logo=minecraft)     
+    ![Spigot](https://img.shields.io/badge/Spigot-1.16.1%E2%80%931.21.11-success&logo=minecraft)   
+    ![Purpur](https://img.shields.io/badge/Purpur-1.16.1%E2%80%931.21.11-success&logo=minecraft)
+
+    ![Folia](https://img.shields.io/badge/Folia-1.19.4%E2%80%931.21.11-success&logo=minecraft)
 
 ## 📌 Links
 [![Discord](https://img.shields.io/badge/Discord-Join-blue?logo=discord&logoColor=white)](https://discord.gg/aE6HydKgqg)
@@ -86,7 +87,8 @@ Found a bug 🐛 or have a great idea? Please let us know on our Discord server!
     ![Paper](https://img.shields.io/badge/Paper-1.16.1%E2%80%931.21.10-success&logo=minecraft)     
     ![Spigot](https://img.shields.io/badge/Spigot-1.16.1%E2%80%931.21.10-success&logo=minecraft)   
     ![Purpur](https://img.shields.io/badge/Purpur-1.16.1%E2%80%931.21.10-success&logo=minecraft)
-*   **Не поддерживает Folia!** ❌
+
+    ![Folia](https://img.shields.io/badge/Folia-1.19.4%E2%80%931.21.11-success&logo=minecraft)
 
 ## 📌 Links
 [![Discord](https://img.shields.io/badge/Discord-Join-blue?logo=discord&logoColor=white)](https://discord.gg/aE6HydKgqg)

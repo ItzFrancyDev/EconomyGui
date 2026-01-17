@@ -698,7 +698,7 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
         message.addExtra(cancel);
         player.spigot().sendMessage(message);
         pendingActions.put(player.getUniqueId(), (msg, p) -> {
-            Bukkit.getScheduler().runTask(plugin, () -> {
+            EconomyGUI.getFoliaLib().getScheduler().runAtEntity(p, (task) -> {
                 if (msg.equalsIgnoreCase("cancel") || msg.equalsIgnoreCase("отмена")) {
                     p.sendMessage(ChatColor.YELLOW + EconomyGUI.getMessageUtil().getMessage("messages.action-cancelled", "Action cancelled."));
                     openMainGUI(p);
@@ -755,7 +755,7 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
         message.addExtra(cancel);
         player.spigot().sendMessage(message);
         pendingActions.put(player.getUniqueId(), (msg, p) -> {
-            Bukkit.getScheduler().runTask(plugin, () -> {
+            EconomyGUI.getFoliaLib().getScheduler().runAtEntity(p, (task) -> {
                 if (msg.equalsIgnoreCase("cancel") || msg.equalsIgnoreCase("отмена")) {
                     p.sendMessage(ChatColor.YELLOW + EconomyGUI.getMessageUtil().getMessage("messages.action-cancelled", "Action cancelled."));
                     openMainGUI(p);
@@ -892,7 +892,7 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
                     message.addExtra(cancel);
                     player.spigot().sendMessage(message);
                     pendingActions.put(playerUUID, (msg, p) -> {
-                        Bukkit.getScheduler().runTask(plugin, () -> {
+                        EconomyGUI.getFoliaLib().getScheduler().runAtEntity(p, (task) -> {
                             String input = ChatColor.stripColor(msg.trim());
                             if (input.equalsIgnoreCase("cancel") || input.equalsIgnoreCase("отмена")) {
                                 resetSearch(p);
@@ -986,7 +986,7 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
                     message.addExtra(cancel);
                     player.spigot().sendMessage(message);
                     pendingActions.put(playerUUID, (msg, p) -> {
-                        Bukkit.getScheduler().runTask(plugin, () -> {
+                        EconomyGUI.getFoliaLib().getScheduler().runAtEntity(p, (task) -> {
                             if (msg.equalsIgnoreCase("cancel") || msg.equalsIgnoreCase("отмена")) {
                                 p.sendMessage(ChatColor.YELLOW + EconomyGUI.getMessageUtil().getMessage("messages.input-cancelled", "Input cancelled."));
                                 openPlayerFinanceManagement(p, result);
@@ -1031,7 +1031,7 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
                 message.addExtra(cancel);
                 player.spigot().sendMessage(message);
                 pendingActions.put(playerUUID, (msg, p) -> {
-                    Bukkit.getScheduler().runTask(plugin, () -> {
+                    EconomyGUI.getFoliaLib().getScheduler().runAtEntity(p, (task) -> {
                         if (msg.equalsIgnoreCase("cancel") || msg.equalsIgnoreCase("отмена")) {
                             p.sendMessage(ChatColor.YELLOW + EconomyGUI.getMessageUtil().getMessage("messages.input-cancelled", "Input cancelled."));
                             openPlayerFinanceManagement(p, result);
@@ -1150,7 +1150,7 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
                 message.addExtra(cancel);
                 player.spigot().sendMessage(message);
                 pendingActions.put(playerUUID, (msg, p) -> {
-                    Bukkit.getScheduler().runTask(plugin, () -> {
+                    EconomyGUI.getFoliaLib().getScheduler().runAtEntity(p, (task) -> {
                         String input = ChatColor.stripColor(msg.trim());
                         if (input.equalsIgnoreCase("cancel") || input.equalsIgnoreCase("отмена")) {
                             p.sendMessage(ChatColor.YELLOW + EconomyGUI.getMessageUtil().getMessage("messages.input-cancelled", "Input cancelled."));
@@ -1229,7 +1229,7 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
         if (pendingActions.containsKey(player.getUniqueId())) {
             event.setCancelled(true);
             String message = event.getMessage();
-            Bukkit.getScheduler().runTask(plugin, () -> {
+            EconomyGUI.getFoliaLib().getScheduler().runAtEntity(player, (task) -> {
                 ChatAction action = pendingActions.get(player.getUniqueId());
                 if (action == null) return;
 
@@ -1432,11 +1432,11 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
     private void openGlobalStatsMenu(Player player) {
         player.sendMessage(ChatColor.YELLOW + EconomyGUI.getMessageUtil().getMessage("gui.stats-loading", "Loading economy statistics"));
 
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+        EconomyGUI.getFoliaLib().getScheduler().runAsync((task1) -> {
             List<PlayerResult> allPlayers = getAllPlayersWithBalances();
 
             if (allPlayers.isEmpty()) {
-                Bukkit.getScheduler().runTask(plugin, () -> {
+                EconomyGUI.getFoliaLib().getScheduler().runNextTick((task2) -> {
                     player.sendMessage(ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("error.no-players", "No players found."));
                 });
                 return;
@@ -1492,7 +1492,7 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
             final List<PlayerResult> finalTopRich = topRich;
             final List<PlayerResult> finalTopPoor = topPoor;
 
-            Bukkit.getScheduler().runTask(plugin, () -> {
+            EconomyGUI.getFoliaLib().getScheduler().runAtEntity(player, (task) -> {
                 Inventory statsInv = Bukkit.createInventory(new StatsMenuHolder(null), 54, ChatColor.DARK_PURPLE + EconomyGUI.getMessageUtil().getMessage("gui.stats-title", "Economy Statistics"));
 
                 ItemStack info = new ItemStack(Material.BOOK);
