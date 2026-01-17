@@ -24,61 +24,62 @@
  */
 package ru.stepanyaa.economyGUI.commands;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.stream.Collectors;
-
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
+import ru.stepanyaa.economyGUI.EconomyGUI;
+
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class EcoGuiCommand implements CommandExecutor, TabCompleter {
 	@Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player)) {
-            sender.sendMessage(ChatColor.RED + getMessage("error.player-only", "This command is for players only!"));
+            sender.sendMessage(ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("error.player-only", "This command is for players only!"));
             return true;
         }
         Player player = (Player) sender;
         if (!player.hasPermission("economygui.admin") && !player.hasPermission("economygui.gui")) {
-            player.sendMessage(ChatColor.RED + getMessage("error.no-permission", "You don't have permission!"));
+            player.sendMessage(ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("error.no-permission", "You don't have permission!"));
             return true;
         }
         if (args.length == 0 || args[0].equalsIgnoreCase("gui")) {
             if (args.length > 1) {
-                player.sendMessage(ChatColor.RED + getMessage("command.usage-gui", "Usage: /economygui gui"));
+                player.sendMessage(ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("command.usage-gui", "Usage: /economygui gui"));
                 return true;
             }
-            economySearchGUI.openLastGUIMenu(player);
+            EconomyGUI.getInstance().getEconomySearchGUI().openLastGUIMenu(player);
             return true;
         } else if (args[0].equalsIgnoreCase("reload")) {
             if (!player.hasPermission("economygui.reload")) {
-                player.sendMessage(ChatColor.RED + getMessage("error.no-permission", "You don't have permission!"));
+                player.sendMessage(ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("error.no-permission", "You don't have permission!"));
                 return true;
             }
             if (args.length != 1) {
-                player.sendMessage(ChatColor.RED + getMessage("command.usage-reload", "Usage: /economygui reload"));
+                player.sendMessage(ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("command.usage-reload", "Usage: /economygui reload"));
                 return true;
             }
-            reloadPlugin(player);
+            EconomyGUI.getInstance().getCommon().reloadPlugin(player);
             return true;
         } else if (args[0].equalsIgnoreCase("reset")) {
             if (!player.hasPermission("economygui.reset")) {
-                player.sendMessage(ChatColor.RED + getMessage("error.no-permission", "You don't have permission!"));
+                player.sendMessage(ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("error.no-permission", "You don't have permission!"));
                 return true;
             }
             if (args.length != 1) {
-                player.sendMessage(ChatColor.RED + getMessage("command.usage", "Usage: /economygui reset"));
+                player.sendMessage(ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("command.usage", "Usage: /economygui reset"));
                 return true;
             }
-            economySearchGUI.resetSearch(player);
+            EconomyGUI.getInstance().getEconomySearchGUI().resetSearch(player);
             return true;
         }
-        player.sendMessage(ChatColor.RED + getMessage("command.usage", "Usage: /economygui <gui | reload | reset>"));
+        player.sendMessage(ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("command.usage", "Usage: /economygui <gui | reload | reset>"));
         return true;
     }
 	

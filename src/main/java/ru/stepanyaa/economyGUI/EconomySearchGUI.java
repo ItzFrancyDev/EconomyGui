@@ -24,7 +24,6 @@
  */
 package ru.stepanyaa.economyGUI;
 
-import me.clip.placeholderapi.PlaceholderAPI;
 import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.TextComponent;
 import net.milkbowl.vault.economy.Economy;
@@ -33,6 +32,7 @@ import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -46,21 +46,17 @@ import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
-import org.bukkit.enchantments.Enchantment;
 
-import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
-import java.util.Date;
 
 public class EconomySearchGUI implements Listener, InventoryHolder {
     private final Map<String, List<Transaction>> transactionHistory = new ConcurrentHashMap<>();
     private static final long PAGE_SWITCH_COOLDOWN = 1000L;
     private final EconomyGUI plugin;
-    private Inventory inventory;
+    private final Inventory inventory;
     private int currentPage = 0;
     private String currentSearch = "";
     private Filter currentFilter = Filter.ALL;
@@ -75,7 +71,7 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
     private final Map<UUID, Double> pendingActionAmount = new ConcurrentHashMap<>();
     private final Map<UUID, PlayerResult> pendingActionTarget = new ConcurrentHashMap<>();
     private List<PlayerResult> cachedResults = new ArrayList<>();
-    private String moneyFormat;
+    private final String moneyFormat;
     private boolean usePlaceholderAPI;
 
     private final Map<UUID, Long> lastPageSwitch = new ConcurrentHashMap<>();
@@ -106,7 +102,7 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
         this.plugin = plugin;
         this.usePlaceholderAPI = plugin.getServer().getPluginManager().isPluginEnabled("PlaceholderAPI");
         this.moneyFormat = "%,.2f";
-        this.inventory = Bukkit.createInventory(this, 54,ChatColor.DARK_PURPLE + plugin.getMessage("gui.title", "Economy Management"));
+        this.inventory = Bukkit.createInventory(this, 54,ChatColor.DARK_PURPLE + EconomyGUI.getMessageUtil().getMessage("gui.title", "Economy Management"));
         refreshGUI();
     }
 
@@ -122,10 +118,10 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
 
         ItemStack searchItem = new ItemStack(Material.COMPASS);
         ItemMeta searchMeta = searchItem.getItemMeta();
-        searchMeta.setDisplayName(ChatColor.YELLOW + plugin.getMessage("gui.search", "Search: %search_query%",
-                "search_query", currentSearch.isEmpty() ? plugin.getMessage("gui.search-all", "all") : currentSearch));
+        searchMeta.setDisplayName(ChatColor.YELLOW + EconomyGUI.getMessageUtil().getMessage("gui.search", "Search: %search_query%",
+                "search_query", currentSearch.isEmpty() ? EconomyGUI.getMessageUtil().getMessage("gui.search-all", "all") : currentSearch));
         List<String> searchLore = new ArrayList<>();
-        searchLore.add(ChatColor.GRAY + plugin.getMessage("gui.search-hint", "Left click: Enter query | Right click: Reset search | Shift+Left: Select/Deselect"));
+        searchLore.add(ChatColor.GRAY + EconomyGUI.getMessageUtil().getMessage("gui.search-hint", "Left click: Enter query | Right click: Reset search | Shift+Left: Select/Deselect"));
         searchMeta.setLore(searchLore);
         searchItem.setItemMeta(searchMeta);
         inventory.setItem(4, searchItem);
@@ -137,9 +133,9 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
         if (plugin.isMassOperationsEnabled()) {
             ItemStack massItem = new ItemStack(Material.DIAMOND_BLOCK);
             ItemMeta massMeta = massItem.getItemMeta();
-            massMeta.setDisplayName(ChatColor.AQUA + plugin.getMessage("gui.mass-menu-title", "Mass Operations"));
+            massMeta.setDisplayName(ChatColor.AQUA + EconomyGUI.getMessageUtil().getMessage("gui.mass-menu-title", "Mass Operations"));
             List<String> massLore = new ArrayList<>();
-            massLore.add(ChatColor.GRAY + plugin.getMessage("gui.mass-hint", "Click for mass give/take/set (select players first)"));
+            massLore.add(ChatColor.GRAY + EconomyGUI.getMessageUtil().getMessage("gui.mass-hint", "Click for mass give/take/set (select players first)"));
             massMeta.setLore(massLore);
             massItem.setItemMeta(massMeta);
             inventory.setItem(48, massItem);
@@ -150,13 +146,13 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
 
         ItemStack prev = currentPage > 0 ? new ItemStack(Material.ARROW) : new ItemStack(Material.RED_STAINED_GLASS_PANE);
         ItemMeta prevMeta = prev.getItemMeta();
-        prevMeta.setDisplayName(currentPage > 0 ? ChatColor.YELLOW + plugin.getMessage("gui.previous-page", "Previous Page")
-                : ChatColor.RED + plugin.getMessage("gui.no-page", "No Page"));
+        prevMeta.setDisplayName(currentPage > 0 ? ChatColor.YELLOW + EconomyGUI.getMessageUtil().getMessage("gui.previous-page", "Previous Page")
+                : ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("gui.no-page", "No Page"));
         List<String> prevLore = new ArrayList<>();
-        prevLore.add(ChatColor.GRAY + plugin.getMessage("gui.page-info", "Page %current_page% of %total_pages%",
+        prevLore.add(ChatColor.GRAY + EconomyGUI.getMessageUtil().getMessage("gui.page-info", "Page %current_page% of %total_pages%",
                 "current_page", String.valueOf(currentPageNum), "total_pages", String.valueOf(totalPages)));
         if (currentPage > 0) {
-            prevLore.add(ChatColor.GRAY + plugin.getMessage("gui.shift-rmb-page", "Shift+RMB: Skip 5 pages"));
+            prevLore.add(ChatColor.GRAY + EconomyGUI.getMessageUtil().getMessage("gui.shift-rmb-page", "Shift+RMB: Skip 5 pages"));
         }
         prevMeta.setLore(prevLore);
         prev.setItemMeta(prevMeta);
@@ -164,13 +160,13 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
 
         ItemStack next = currentPage < totalPages - 1 ? new ItemStack(Material.ARROW) : new ItemStack(Material.RED_STAINED_GLASS_PANE);
         ItemMeta nextMeta = next.getItemMeta();
-        nextMeta.setDisplayName(currentPage < totalPages - 1 ? ChatColor.YELLOW + plugin.getMessage("gui.next-page", "Next Page")
-                : ChatColor.RED + plugin.getMessage("gui.no-page", "No Page"));
+        nextMeta.setDisplayName(currentPage < totalPages - 1 ? ChatColor.YELLOW + EconomyGUI.getMessageUtil().getMessage("gui.next-page", "Next Page")
+                : ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("gui.no-page", "No Page"));
         List<String> nextLore = new ArrayList<>();
-        nextLore.add(ChatColor.GRAY + plugin.getMessage("gui.page-info", "Page %current_page% of %total_pages%",
+        nextLore.add(ChatColor.GRAY + EconomyGUI.getMessageUtil().getMessage("gui.page-info", "Page %current_page% of %total_pages%",
                 "current_page", String.valueOf(currentPageNum), "total_pages", String.valueOf(totalPages)));
         if (currentPage < totalPages - 1) {
-            nextLore.add(ChatColor.GRAY + plugin.getMessage("gui.shift-rmb-page", "Shift+RMB: Skip 5 pages"));
+            nextLore.add(ChatColor.GRAY + EconomyGUI.getMessageUtil().getMessage("gui.shift-rmb-page", "Shift+RMB: Skip 5 pages"));
         }
         nextMeta.setLore(nextLore);
         next.setItemMeta(nextMeta);
@@ -179,18 +175,18 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
         if (plugin.isPlayerSelectionEnabled()) {
             ItemStack selectBtn = new ItemStack(Material.EMERALD_BLOCK);
             ItemMeta selectMeta = selectBtn.getItemMeta();
-            selectMeta.setDisplayName(ChatColor.GREEN + plugin.getMessage("gui.select-all", "Select All"));
+            selectMeta.setDisplayName(ChatColor.GREEN + EconomyGUI.getMessageUtil().getMessage("gui.select-all", "Select All"));
             List<String> selectLore = new ArrayList<>();
-            selectLore.add(ChatColor.GRAY + plugin.getMessage("gui.click-to-select", "Click to select all on page"));
+            selectLore.add(ChatColor.GRAY + EconomyGUI.getMessageUtil().getMessage("gui.click-to-select", "Click to select all on page"));
             selectMeta.setLore(selectLore);
             selectBtn.setItemMeta(selectMeta);
             inventory.setItem(46, selectBtn);
 
             ItemStack cancelBtn = new ItemStack(Material.REDSTONE_BLOCK);
             ItemMeta cancelMeta = cancelBtn.getItemMeta();
-            cancelMeta.setDisplayName(ChatColor.RED + plugin.getMessage("gui.cancel-selection", "Cancel Selection"));
+            cancelMeta.setDisplayName(ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("gui.cancel-selection", "Cancel Selection"));
             List<String> cancelLore = new ArrayList<>();
-            cancelLore.add(ChatColor.GRAY + plugin.getMessage("gui.click-to-cancel", "Click to cancel all selections"));
+            cancelLore.add(ChatColor.GRAY + EconomyGUI.getMessageUtil().getMessage("gui.click-to-cancel", "Click to cancel all selections"));
             cancelMeta.setLore(cancelLore);
             cancelBtn.setItemMeta(cancelMeta);
             inventory.setItem(47, cancelBtn);
@@ -210,9 +206,9 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
         if (results.isEmpty()) {
             ItemStack noPlayers = new ItemStack(Material.BARRIER);
             ItemMeta meta = noPlayers.getItemMeta();
-            meta.setDisplayName(ChatColor.RED + plugin.getMessage("gui.no-players", "No players found"));
+            meta.setDisplayName(ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("gui.no-players", "No players found"));
             List<String> lore = new ArrayList<>();
-            lore.add(ChatColor.GRAY + plugin.getMessage("gui.no-players-hint", "Try changing the search or filter"));
+            lore.add(ChatColor.GRAY + EconomyGUI.getMessageUtil().getMessage("gui.no-players-hint", "Try changing the search or filter"));
             meta.setLore(lore);
             noPlayers.setItemMeta(meta);
             inventory.setItem(22, noPlayers);
@@ -221,12 +217,12 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
     private ItemStack createGlobalStatsButton() {
         ItemStack item = new ItemStack(Material.BOOK);
         ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName(ChatColor.LIGHT_PURPLE + plugin.getMessage("gui.global-stats", "Global Economy Stats"));
+        meta.setDisplayName(ChatColor.LIGHT_PURPLE + EconomyGUI.getMessageUtil().getMessage("gui.global-stats", "Global Economy Stats"));
 
         List<String> lore = new ArrayList<>();
-        lore.add(ChatColor.GRAY + plugin.getMessage("gui.click-to-view", "Click to view server economy overview"));
+        lore.add(ChatColor.GRAY + EconomyGUI.getMessageUtil().getMessage("gui.click-to-view", "Click to view server economy overview"));
         lore.add("");
-        lore.add(ChatColor.GRAY + plugin.getMessage("gui.global-stats-lore","(Total balance, average, top players...)"));
+        lore.add(ChatColor.GRAY + EconomyGUI.getMessageUtil().getMessage("gui.global-stats-lore","(Total balance, average, top players...)"));
         meta.setLore(lore);
 
         item.setItemMeta(meta);
@@ -259,7 +255,7 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
                 displayColor = ChatColor.GRAY;
         }
 
-        String displayName = displayColor + plugin.getMessage(nameKey, nameKey);
+        String displayName = displayColor + EconomyGUI.getMessageUtil().getMessage(nameKey, nameKey);
 
         ItemStack item = new ItemStack(mat);
         ItemMeta meta = item.getItemMeta();
@@ -267,15 +263,15 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
 
         List<String> lore = new ArrayList<>();
 
-        lore.add(ChatColor.GRAY + plugin.getMessage("filter.filter-current","Current filter:"));
+        lore.add(ChatColor.GRAY + EconomyGUI.getMessageUtil().getMessage("filter.filter-current","Current filter:"));
         lore.add("");
         lore.add(createFilterLine(Filter.ALL, currentFilter));
         lore.add(createFilterLine(Filter.ONLINE, currentFilter));
         lore.add(createFilterLine(Filter.OFFLINE, currentFilter));
 
         lore.add("");
-        lore.add(ChatColor.GRAY + plugin.getMessage("gui.click-cycle", "LMB → Next"));
-        lore.add(ChatColor.GRAY + plugin.getMessage("gui.right-click-cycle", "Right-click → Previous"));
+        lore.add(ChatColor.GRAY + EconomyGUI.getMessageUtil().getMessage("gui.click-cycle", "LMB → Next"));
+        lore.add(ChatColor.GRAY + EconomyGUI.getMessageUtil().getMessage("gui.right-click-cycle", "Right-click → Previous"));
 
         meta.setLore(lore);
         item.setItemMeta(meta);
@@ -287,15 +283,15 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
 
         switch (filter) {
             case ALL:
-                name = plugin.getMessage("filter.all", "Все игроки");
+                name = EconomyGUI.getMessageUtil().getMessage("filter.all", "Все игроки");
                 color = ChatColor.WHITE;
                 break;
             case ONLINE:
-                name = plugin.getMessage("filter.online", "Онлайн");
+                name = EconomyGUI.getMessageUtil().getMessage("filter.online", "Онлайн");
                 color = ChatColor.GREEN;
                 break;
             case OFFLINE:
-                name = plugin.getMessage("filter.offline", "Офлайн");
+                name = EconomyGUI.getMessageUtil().getMessage("filter.offline", "Офлайн");
                 color = ChatColor.GRAY;
                 break;
             default:
@@ -314,12 +310,12 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
         meta.setOwningPlayer(player);
         meta.setDisplayName(ChatColor.YELLOW + player.getName());
         List<String> lore = new ArrayList<>();
-        double balance = plugin.getEconomy().getBalance(player);
+        double balance = plugin.getEcon().getBalance(player);
         String formattedBalance = String.format(moneyFormat, balance);
-        lore.add(ChatColor.GOLD + plugin.getMessage("gui.balance", "Balance: $%balance%", "balance", formattedBalance));
-        lore.add(ChatColor.GRAY + plugin.getMessage("gui.actions", "Left click: Manage | Right click: Quick Actions | Shift+Left: Select"));
+        lore.add(ChatColor.GOLD + EconomyGUI.getMessageUtil().getMessage("gui.balance", "Balance: $%balance%", "balance", formattedBalance));
+        lore.add(ChatColor.GRAY + EconomyGUI.getMessageUtil().getMessage("gui.actions", "Left click: Manage | Right click: Quick Actions | Shift+Left: Select"));
         if (isSelected(player.getUniqueId().toString())) {
-            lore.add(ChatColor.GREEN + plugin.getMessage("gui.selected", "Selected"));
+            lore.add(ChatColor.GREEN + EconomyGUI.getMessageUtil().getMessage("gui.selected", "Selected"));
             meta.addEnchant(getGlowEnchantment(), 1, true);
             meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
         }
@@ -342,64 +338,64 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
         currentPage = 0;
         lastPage.put(player.getUniqueId(), 0);
         refreshGUI();
-        player.sendMessage(ChatColor.GREEN + plugin.getMessage("filter.applied","Filter applied: " + newFilter.name()));
+        player.sendMessage(ChatColor.GREEN + EconomyGUI.getMessageUtil().getMessage("filter.applied","Filter applied: " + newFilter.name()));
     }
 
     private void openPlayerFinanceManagement(Player player, PlayerResult result) {
-        Inventory financeInv = Bukkit.createInventory(this, 54, ChatColor.DARK_PURPLE + plugin.getMessage("gui.title", "Economy Management") + ": " + result.name);
+        Inventory financeInv = Bukkit.createInventory(this, 54, ChatColor.DARK_PURPLE + EconomyGUI.getMessageUtil().getMessage("gui.title", "Economy Management") + ": " + result.name);
         OfflinePlayer target = Bukkit.getOfflinePlayer(UUID.fromString(result.uuid));
         financeInv.setItem(4, createPlayerHead(target, 0));
 
         ItemStack inputField = new ItemStack(Material.WRITABLE_BOOK);
         ItemMeta inputMeta = inputField.getItemMeta();
-        inputMeta.setDisplayName(ChatColor.YELLOW + plugin.getMessage("gui.enter-amount", "Enter Amount"));
+        inputMeta.setDisplayName(ChatColor.YELLOW + EconomyGUI.getMessageUtil().getMessage("gui.enter-amount", "Enter Amount"));
         List<String> inputLore = new ArrayList<>();
-        inputLore.add(ChatColor.GRAY + plugin.getMessage("gui.enter-amount-hint", "Left click to enter amount in chat"));
+        inputLore.add(ChatColor.GRAY + EconomyGUI.getMessageUtil().getMessage("gui.enter-amount-hint", "Left click to enter amount in chat"));
         inputMeta.setLore(inputLore);
         inputField.setItemMeta(inputMeta);
         financeInv.setItem(13, inputField);
 
         ItemStack giveBtn = new ItemStack(Material.EMERALD);
         ItemMeta giveMeta = giveBtn.getItemMeta();
-        giveMeta.setDisplayName(ChatColor.GREEN + plugin.getMessage("action.give", "Give Amount"));
+        giveMeta.setDisplayName(ChatColor.GREEN + EconomyGUI.getMessageUtil().getMessage("action.give", "Give Amount"));
         List<String> giveLore = new ArrayList<>();
-        giveLore.add(ChatColor.GRAY + plugin.getMessage("gui.give-hint", "Click to open digital menu"));
+        giveLore.add(ChatColor.GRAY + EconomyGUI.getMessageUtil().getMessage("gui.give-hint", "Click to open digital menu"));
         giveMeta.setLore(giveLore);
         giveBtn.setItemMeta(giveMeta);
         financeInv.setItem(20, giveBtn);
 
         ItemStack takeBtn = new ItemStack(Material.REDSTONE);
         ItemMeta takeMeta = takeBtn.getItemMeta();
-        takeMeta.setDisplayName(ChatColor.RED + plugin.getMessage("action.take", "Take Amount"));
+        takeMeta.setDisplayName(ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("action.take", "Take Amount"));
         List<String> takeLore = new ArrayList<>();
-        takeLore.add(ChatColor.GRAY + plugin.getMessage("gui.take-hint", "Click to open digital menu"));
+        takeLore.add(ChatColor.GRAY + EconomyGUI.getMessageUtil().getMessage("gui.take-hint", "Click to open digital menu"));
         takeMeta.setLore(takeLore);
         takeBtn.setItemMeta(takeMeta);
         financeInv.setItem(22, takeBtn);
 
         ItemStack setBtn = new ItemStack(Material.GOLD_INGOT);
         ItemMeta setMeta = setBtn.getItemMeta();
-        setMeta.setDisplayName(ChatColor.YELLOW + plugin.getMessage("action.set", "Set Amount"));
+        setMeta.setDisplayName(ChatColor.YELLOW + EconomyGUI.getMessageUtil().getMessage("action.set", "Set Amount"));
         List<String> setLore = new ArrayList<>();
-        setLore.add(ChatColor.GRAY + plugin.getMessage("gui.set-hint", "Click to enter amount in chat"));
+        setLore.add(ChatColor.GRAY + EconomyGUI.getMessageUtil().getMessage("gui.set-hint", "Click to enter amount in chat"));
         setMeta.setLore(setLore);
         setBtn.setItemMeta(setMeta);
         financeInv.setItem(24, setBtn);
 
         ItemStack historyBtn = new ItemStack(Material.BOOK);
         ItemMeta historyMeta = historyBtn.getItemMeta();
-        historyMeta.setDisplayName(ChatColor.BLUE + plugin.getMessage("history.operations", "Operations History"));
+        historyMeta.setDisplayName(ChatColor.BLUE + EconomyGUI.getMessageUtil().getMessage("history.operations", "Operations History"));
         List<String> historyLore = new ArrayList<>();
-        historyLore.add(ChatColor.GRAY + plugin.getMessage("history.hint", "Click to view logs"));
+        historyLore.add(ChatColor.GRAY + EconomyGUI.getMessageUtil().getMessage("history.hint", "Click to view logs"));
         historyMeta.setLore(historyLore);
         historyBtn.setItemMeta(historyMeta);
         financeInv.setItem(31, historyBtn);
 
         ItemStack backBtn = new ItemStack(Material.ARROW);
         ItemMeta backMeta = backBtn.getItemMeta();
-        backMeta.setDisplayName(ChatColor.RED + plugin.getMessage("gui.back", "Back"));
+        backMeta.setDisplayName(ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("gui.back", "Back"));
         List<String> backLore = new ArrayList<>();
-        backLore.add(ChatColor.GRAY + plugin.getMessage("gui.back-hint", "Return to main menu"));
+        backLore.add(ChatColor.GRAY + EconomyGUI.getMessageUtil().getMessage("gui.back-hint", "Return to main menu"));
         backMeta.setLore(backLore);
         backBtn.setItemMeta(backMeta);
         financeInv.setItem(49, backBtn);
@@ -413,7 +409,7 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
         PlayerResult result = getPlayerResultByName(targetName);
         if (result == null) return;
 
-        Inventory contextInv = Bukkit.createInventory(this, 27, ChatColor.BLUE + plugin.getMessage("context-menu.title", "Quick Actions for %player%", "player", targetName));
+        Inventory contextInv = Bukkit.createInventory(this, 27, ChatColor.BLUE + EconomyGUI.getMessageUtil().getMessage("context-menu.title", "Quick Actions for %player%", "player", targetName));
         lastOpenedMenu.put(player.getUniqueId(), "context");
         lastTarget.put(player.getUniqueId(), targetName);
 
@@ -427,14 +423,14 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
 
         ItemStack back = new ItemStack(Material.BARRIER);
         ItemMeta backMeta = back.getItemMeta();
-        backMeta.setDisplayName(ChatColor.RED + plugin.getMessage("context-menu.back", "Back to Main Menu"));
+        backMeta.setDisplayName(ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("context-menu.back", "Back to Main Menu"));
         back.setItemMeta(backMeta);
         contextInv.setItem(22, back);
 
         if (plugin.isFullManagementEnabled()) {
             ItemStack full = new ItemStack(Material.BOOK);
             ItemMeta fullMeta = full.getItemMeta();
-            fullMeta.setDisplayName(ChatColor.GREEN + plugin.getMessage("context-menu.full-open", "Open Full Management"));
+            fullMeta.setDisplayName(ChatColor.GREEN + EconomyGUI.getMessageUtil().getMessage("context-menu.full-open", "Open Full Management"));
             full.setItemMeta(fullMeta);
             contextInv.setItem(4, full);
         }
@@ -454,7 +450,7 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
     }
 
     private void openDigitalMenu(Player player, String action, PlayerResult result) {
-        Inventory digitalInv = Bukkit.createInventory(this, 27, ChatColor.DARK_PURPLE + plugin.getMessage("gui.title", "Economy Management") + ": " + result.name);
+        Inventory digitalInv = Bukkit.createInventory(this, 27, ChatColor.DARK_PURPLE + EconomyGUI.getMessageUtil().getMessage("gui.title", "Economy Management") + ": " + result.name);
         double totalAmount = pendingActionAmount.getOrDefault(player.getUniqueId(), 0.0);
         digitalInv.setItem(4, createPlayerHead(Bukkit.getOfflinePlayer(UUID.fromString(result.uuid)), 0));
 
@@ -465,8 +461,8 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
             ItemMeta numMeta = numBtn.getItemMeta();
             numMeta.setDisplayName(ChatColor.YELLOW + String.valueOf(amount));
             List<String> numLore = new ArrayList<>();
-            numLore.add(ChatColor.GRAY + plugin.getMessage("gui.add-amount-hint", "Click to add %amount% to total", "amount", String.valueOf(amount)));
-            numLore.add(ChatColor.GRAY + plugin.getMessage("gui.current-amount", "Current amount: $%amount%", "amount", String.format(moneyFormat, totalAmount)));
+            numLore.add(ChatColor.GRAY + EconomyGUI.getMessageUtil().getMessage("gui.add-amount-hint", "Click to add %amount% to total", "amount", String.valueOf(amount)));
+            numLore.add(ChatColor.GRAY + EconomyGUI.getMessageUtil().getMessage("gui.current-amount", "Current amount: $%amount%", "amount", String.format(moneyFormat, totalAmount)));
             numMeta.setLore(numLore);
             numBtn.setItemMeta(numMeta);
             digitalInv.setItem(slot, numBtn);
@@ -475,38 +471,38 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
 
         ItemStack customBtn = new ItemStack(Material.WRITABLE_BOOK);
         ItemMeta customMeta = customBtn.getItemMeta();
-        customMeta.setDisplayName(ChatColor.BLUE + plugin.getMessage("gui.custom-amount", "Custom Amount"));
+        customMeta.setDisplayName(ChatColor.BLUE + EconomyGUI.getMessageUtil().getMessage("gui.custom-amount", "Custom Amount"));
         List<String> customLore = new ArrayList<>();
-        customLore.add(ChatColor.GRAY + plugin.getMessage("gui.custom-amount-hint", "Left click to enter custom amount in chat"));
-        customLore.add(ChatColor.GRAY + plugin.getMessage("gui.current-amount", "Current amount: $%amount%", "amount", String.format(moneyFormat, totalAmount)));
+        customLore.add(ChatColor.GRAY + EconomyGUI.getMessageUtil().getMessage("gui.custom-amount-hint", "Left click to enter custom amount in chat"));
+        customLore.add(ChatColor.GRAY + EconomyGUI.getMessageUtil().getMessage("gui.current-amount", "Current amount: $%amount%", "amount", String.format(moneyFormat, totalAmount)));
         customMeta.setLore(customLore);
         customBtn.setItemMeta(customMeta);
         digitalInv.setItem(22, customBtn);
 
         ItemStack resetBtn = new ItemStack(Material.REDSTONE_BLOCK);
         ItemMeta resetMeta = resetBtn.getItemMeta();
-        resetMeta.setDisplayName(ChatColor.RED + plugin.getMessage("gui.reset-amount", "Reset Amount"));
+        resetMeta.setDisplayName(ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("gui.reset-amount", "Reset Amount"));
         List<String> resetLore = new ArrayList<>();
-        resetLore.add(ChatColor.GRAY + plugin.getMessage("gui.reset-amount-hint", "Reset the selected amount to 0"));
-        resetLore.add(ChatColor.GRAY + plugin.getMessage("gui.current-amount", "Current amount: $%amount%", "amount", String.format(moneyFormat, totalAmount)));
+        resetLore.add(ChatColor.GRAY + EconomyGUI.getMessageUtil().getMessage("gui.reset-amount-hint", "Reset the selected amount to 0"));
+        resetLore.add(ChatColor.GRAY + EconomyGUI.getMessageUtil().getMessage("gui.current-amount", "Current amount: $%amount%", "amount", String.format(moneyFormat, totalAmount)));
         resetMeta.setLore(resetLore);
         resetBtn.setItemMeta(resetMeta);
         digitalInv.setItem(18, resetBtn);
 
         ItemStack confirmBtn = new ItemStack(Material.EMERALD_BLOCK);
         ItemMeta confirmMeta = confirmBtn.getItemMeta();
-        confirmMeta.setDisplayName(ChatColor.GREEN + plugin.getMessage("gui.confirm", "Confirm"));
+        confirmMeta.setDisplayName(ChatColor.GREEN + EconomyGUI.getMessageUtil().getMessage("gui.confirm", "Confirm"));
         List<String> confirmLore = new ArrayList<>();
-        confirmLore.add(ChatColor.GRAY + plugin.getMessage("gui.confirm-hint", "Execute: %action% $%amount%", "action", action, "amount", String.format(moneyFormat, totalAmount)));
+        confirmLore.add(ChatColor.GRAY + EconomyGUI.getMessageUtil().getMessage("gui.confirm-hint", "Execute: %action% $%amount%", "action", action, "amount", String.format(moneyFormat, totalAmount)));
         confirmMeta.setLore(confirmLore);
         confirmBtn.setItemMeta(confirmMeta);
         digitalInv.setItem(16, confirmBtn);
 
         ItemStack backBtn = new ItemStack(Material.ARROW);
         ItemMeta backMeta = backBtn.getItemMeta();
-        backMeta.setDisplayName(ChatColor.RED + plugin.getMessage("gui.back", "Back"));
+        backMeta.setDisplayName(ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("gui.back", "Back"));
         List<String> backLore = new ArrayList<>();
-        backLore.add(ChatColor.GRAY + plugin.getMessage("gui.back-hint-finance", "Return to finance menu"));
+        backLore.add(ChatColor.GRAY + EconomyGUI.getMessageUtil().getMessage("gui.back-hint-finance", "Return to finance menu"));
         backMeta.setLore(backLore);
         backBtn.setItemMeta(backMeta);
         digitalInv.setItem(26, backBtn);
@@ -522,7 +518,7 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
         List<Transaction> history = transactionHistory.getOrDefault(uuid, new ArrayList<>());
         history.sort(Comparator.comparingLong(t -> -t.timestamp));
 
-        Inventory historyInv = Bukkit.createInventory(this, 54, ChatColor.GOLD + plugin.getMessage("gui.history", "Operations History") + ": " + result.name);
+        Inventory historyInv = Bukkit.createInventory(this, 54, ChatColor.GOLD + EconomyGUI.getMessageUtil().getMessage("gui.history", "Operations History") + ": " + result.name);
         lastOpenedMenu.put(player.getUniqueId(), "history");
         lastTarget.put(player.getUniqueId(), result.name);
 
@@ -548,7 +544,7 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
         if (history.isEmpty()) {
             ItemStack noHistory = new ItemStack(Material.BARRIER);
             ItemMeta noMeta = noHistory.getItemMeta();
-            noMeta.setDisplayName(ChatColor.RED + plugin.getMessage("gui.no-players", "No transactions found"));
+            noMeta.setDisplayName(ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("gui.no-players", "No transactions found"));
             noHistory.setItemMeta(noMeta);
             historyInv.setItem(22, noHistory);
         }
@@ -556,10 +552,10 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
         int totalPages = (history.size() / 45) + (history.size() % 45 > 0 ? 1 : 0);
         ItemStack prev = page > 0 ? new ItemStack(Material.ARROW) : new ItemStack(Material.RED_STAINED_GLASS_PANE);
         ItemMeta prevMeta = prev.getItemMeta();
-        prevMeta.setDisplayName(page > 0 ? ChatColor.YELLOW + plugin.getMessage("gui.previous-page", "Previous Page")
-                : ChatColor.RED + plugin.getMessage("gui.no-page", "No Page"));
+        prevMeta.setDisplayName(page > 0 ? ChatColor.YELLOW + EconomyGUI.getMessageUtil().getMessage("gui.previous-page", "Previous Page")
+                : ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("gui.no-page", "No Page"));
         List<String> prevLore = new ArrayList<>();
-        prevLore.add(ChatColor.GRAY + plugin.getMessage("gui.page-info", "Page %current_page% of %total_pages%",
+        prevLore.add(ChatColor.GRAY + EconomyGUI.getMessageUtil().getMessage("gui.page-info", "Page %current_page% of %total_pages%",
                 "current_page", String.valueOf(page + 1), "total_pages", String.valueOf(totalPages)));
         prevMeta.setLore(prevLore);
         prev.setItemMeta(prevMeta);
@@ -567,10 +563,10 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
 
         ItemStack next = page < totalPages - 1 ? new ItemStack(Material.ARROW) : new ItemStack(Material.RED_STAINED_GLASS_PANE);
         ItemMeta nextMeta = next.getItemMeta();
-        nextMeta.setDisplayName(page < totalPages - 1 ? ChatColor.YELLOW + plugin.getMessage("gui.next-page", "Next Page")
-                : ChatColor.RED + plugin.getMessage("gui.no-page", "No Page"));
+        nextMeta.setDisplayName(page < totalPages - 1 ? ChatColor.YELLOW + EconomyGUI.getMessageUtil().getMessage("gui.next-page", "Next Page")
+                : ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("gui.no-page", "No Page"));
         List<String> nextLore = new ArrayList<>();
-        nextLore.add(ChatColor.GRAY + plugin.getMessage("gui.page-info", "Page %current_page% of %total_pages%",
+        nextLore.add(ChatColor.GRAY + EconomyGUI.getMessageUtil().getMessage("gui.page-info", "Page %current_page% of %total_pages%",
                 "current_page", String.valueOf(page + 1), "total_pages", String.valueOf(totalPages)));
         nextMeta.setLore(nextLore);
         next.setItemMeta(nextMeta);
@@ -578,7 +574,7 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
 
         ItemStack back = new ItemStack(Material.BARRIER);
         ItemMeta backMeta = back.getItemMeta();
-        backMeta.setDisplayName(ChatColor.RED + plugin.getMessage("gui.back", "Back"));
+        backMeta.setDisplayName(ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("gui.back", "Back"));
         back.setItemMeta(backMeta);
         historyInv.setItem(49, back);
 
@@ -586,12 +582,12 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
     }
 
     private void openMassActionsMenu(Player player) {
-        Inventory massInv = Bukkit.createInventory(this, 27, ChatColor.DARK_PURPLE + plugin.getMessage("gui.mass-menu-title", "Mass Operations"));
+        Inventory massInv = Bukkit.createInventory(this, 27, ChatColor.DARK_PURPLE + EconomyGUI.getMessageUtil().getMessage("gui.mass-menu-title", "Mass Operations"));
         ItemStack giveMass = new ItemStack(Material.EMERALD_BLOCK);
         ItemMeta giveMeta = giveMass.getItemMeta();
-        giveMeta.setDisplayName(ChatColor.GREEN + plugin.getMessage("gui.mass-give", "Give Amount to All Selected"));
+        giveMeta.setDisplayName(ChatColor.GREEN + EconomyGUI.getMessageUtil().getMessage("gui.mass-give", "Give Amount to All Selected"));
         List<String> giveLore = new ArrayList<>();
-        giveLore.add(ChatColor.GRAY + plugin.getMessage("gui.mass-give-hint", "Click to enter amount for all"));
+        giveLore.add(ChatColor.GRAY + EconomyGUI.getMessageUtil().getMessage("gui.mass-give-hint", "Click to enter amount for all"));
         giveMeta.setLore(giveLore);
         giveMass.setItemMeta(giveMeta);
         massInv.setItem(11, giveMass);
@@ -599,27 +595,27 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
 
         ItemStack takeMass = new ItemStack(Material.REDSTONE_BLOCK);
         ItemMeta takeMeta = takeMass.getItemMeta();
-        takeMeta.setDisplayName(ChatColor.RED + plugin.getMessage("gui.mass-take", "Take Amount from All Selected"));
+        takeMeta.setDisplayName(ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("gui.mass-take", "Take Amount from All Selected"));
         List<String> takeLore = new ArrayList<>();
-        takeLore.add(ChatColor.GRAY + plugin.getMessage("gui.mass-take-hint", "Click to enter amount for all"));
+        takeLore.add(ChatColor.GRAY + EconomyGUI.getMessageUtil().getMessage("gui.mass-take-hint", "Click to enter amount for all"));
         takeMeta.setLore(takeLore);
         takeMass.setItemMeta(takeMeta);
         massInv.setItem(13, takeMass);
 
         ItemStack setMass = new ItemStack(Material.GOLD_BLOCK);
         ItemMeta setMeta = setMass.getItemMeta();
-        setMeta.setDisplayName(ChatColor.YELLOW + plugin.getMessage("gui.mass-set", "Set Balance for All Selected"));
+        setMeta.setDisplayName(ChatColor.YELLOW + EconomyGUI.getMessageUtil().getMessage("gui.mass-set", "Set Balance for All Selected"));
         List<String> setLore = new ArrayList<>();
-        setLore.add(ChatColor.GRAY + plugin.getMessage("gui.mass-set-hint", "Click to enter amount for all"));
+        setLore.add(ChatColor.GRAY + EconomyGUI.getMessageUtil().getMessage("gui.mass-set-hint", "Click to enter amount for all"));
         setMeta.setLore(setLore);
         setMass.setItemMeta(setMeta);
         massInv.setItem(15, setMass);
 
         ItemStack backBtn = new ItemStack(Material.ARROW);
         ItemMeta backMeta = backBtn.getItemMeta();
-        backMeta.setDisplayName(ChatColor.RED + plugin.getMessage("gui.back", "Back"));
+        backMeta.setDisplayName(ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("gui.back", "Back"));
         List<String> backLore = new ArrayList<>();
-        backLore.add(ChatColor.GRAY + plugin.getMessage("gui.click-to-return", "Return to Main Menu"));
+        backLore.add(ChatColor.GRAY + EconomyGUI.getMessageUtil().getMessage("gui.click-to-return", "Return to Main Menu"));
         backMeta.setLore(backLore);
         backBtn.setItemMeta(backMeta);
         massInv.setItem(22, backBtn);
@@ -632,7 +628,7 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
         transactionHistory.computeIfAbsent(uuid, k -> new ArrayList<>())
                 .add(new Transaction(System.currentTimeMillis(), action, amount, executor.getName()));
         cleanOldTransactions();
-        plugin.saveTransactions();
+        EconomyGUI.getMessageUtil().saveTransactions();
     }
 
     private List<PlayerResult> getFilteredPlayers() {
@@ -648,7 +644,7 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
                     (currentFilter == Filter.SELECTED && isSelected(player.getUniqueId().toString()));
             if (matchesSearch && matchesFilter) {
                 results.add(new PlayerResult(player.getUniqueId().toString(), player.getName(),
-                        player.isOnline(), plugin.getEconomy().getBalance(player)));
+                        player.isOnline(), plugin.getEcon().getBalance(player)));
             }
         }
         results.sort(Comparator.comparingDouble((PlayerResult pr) -> pr.balance).reversed());
@@ -673,7 +669,7 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
         lastPage.put(playerUUID, 0);
         lastTarget.remove(playerUUID);
         lastOpenedMenu.put(playerUUID, "main");
-        player.sendMessage(ChatColor.GREEN + plugin.getMessage("messages.search-reset", "Search and filters reset."));
+        player.sendMessage(ChatColor.GREEN + EconomyGUI.getMessageUtil().getMessage("messages.search-reset", "Search and filters reset."));
         openMainGUI(player);
     }
 
@@ -692,19 +688,19 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
     private void requestAmount(Player player, String action, String targetName) {
         PlayerResult result = getPlayerResultByName(targetName);
         if (result == null) {
-            player.sendMessage(ChatColor.RED + plugin.getMessage("error.player-not-found", "Player not found."));
+            player.sendMessage(ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("error.player-not-found", "Player not found."));
             return;
         }
         player.closeInventory();
-        TextComponent message = new TextComponent(ChatColor.YELLOW + plugin.getMessage("gui.enter-amount", "Enter amount (or click to cancel):"));
-        TextComponent cancel = new TextComponent(ChatColor.RED + plugin.getMessage("gui.cancel", "[Cancel]"));
+        TextComponent message = new TextComponent(ChatColor.YELLOW + EconomyGUI.getMessageUtil().getMessage("gui.enter-amount", "Enter amount (or click to cancel):"));
+        TextComponent cancel = new TextComponent(ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("gui.cancel", "[Cancel]"));
         cancel.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/economygui reset"));
         message.addExtra(cancel);
         player.spigot().sendMessage(message);
         pendingActions.put(player.getUniqueId(), (msg, p) -> {
             Bukkit.getScheduler().runTask(plugin, () -> {
                 if (msg.equalsIgnoreCase("cancel") || msg.equalsIgnoreCase("отмена")) {
-                    p.sendMessage(ChatColor.YELLOW + plugin.getMessage("messages.action-cancelled", "Action cancelled."));
+                    p.sendMessage(ChatColor.YELLOW + EconomyGUI.getMessageUtil().getMessage("messages.action-cancelled", "Action cancelled."));
                     openMainGUI(p);
                     pendingActions.remove(p.getUniqueId());
                     pendingActionType.remove(p.getUniqueId());
@@ -713,34 +709,34 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
                 try {
                     double amount = Double.parseDouble(msg.trim());
                     if (amount <= 0) {
-                        p.sendMessage(ChatColor.RED + plugin.getMessage("error.invalid-amount", "Amount must be positive."));
+                        p.sendMessage(ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("error.invalid-amount", "Amount must be positive."));
                         openMainGUI(p);
                         return;
                     }
                     OfflinePlayer target = Bukkit.getOfflinePlayer(UUID.fromString(result.uuid));
                     boolean success = false;
                     if (action.equals("give")) {
-                        success = plugin.getEconomy().depositPlayer(target, amount).transactionSuccess();
+                        success = plugin.getEcon().depositPlayer(target, amount).transactionSuccess();
                         if (success) logTransaction(result.uuid, "give", amount, p);
                     } else if (action.equals("take")) {
-                        if (plugin.getEconomy().getBalance(target) >= amount) {
-                            success = plugin.getEconomy().withdrawPlayer(target, amount).transactionSuccess();
+                        if (plugin.getEcon().getBalance(target) >= amount) {
+                            success = plugin.getEcon().withdrawPlayer(target, amount).transactionSuccess();
                             if (success) logTransaction(result.uuid, "take", amount, p);
                         } else {
-                            p.sendMessage(ChatColor.RED + plugin.getMessage("error.insufficient-funds",
+                            p.sendMessage(ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("error.insufficient-funds",
                                     "Insufficient funds for %player%", "%player%", target.getName()));
                         }
                     }
                     if (success) {
-                        p.sendMessage(ChatColor.GREEN + plugin.getMessage("action.executed",
+                        p.sendMessage(ChatColor.GREEN + EconomyGUI.getMessageUtil().getMessage("action.executed",
                                 "Executed %action% of $%amount% for %player%",
                                 "%action%", action, "%amount%", String.format(moneyFormat, amount), "%player%", result.name));
                     } else {
-                        p.sendMessage(ChatColor.RED + plugin.getMessage("error.action-failed", "Action failed."));
+                        p.sendMessage(ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("error.action-failed", "Action failed."));
                     }
                     openMainGUI(p);
                 } catch (NumberFormatException e) {
-                    p.sendMessage(ChatColor.RED + plugin.getMessage("error.invalid-amount-format", "Invalid amount format."));
+                    p.sendMessage(ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("error.invalid-amount-format", "Invalid amount format."));
                     openMainGUI(p);
                 }
                 pendingActions.remove(p.getUniqueId());
@@ -753,15 +749,15 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
 
     private void requestMassAmount(Player player, String action) {
         player.closeInventory();
-        TextComponent message = new TextComponent(ChatColor.YELLOW + plugin.getMessage("gui.enter-amount", "Enter amount (or click to cancel):"));
-        TextComponent cancel = new TextComponent(ChatColor.RED + plugin.getMessage("gui.cancel", "[Cancel]"));
+        TextComponent message = new TextComponent(ChatColor.YELLOW + EconomyGUI.getMessageUtil().getMessage("gui.enter-amount", "Enter amount (or click to cancel):"));
+        TextComponent cancel = new TextComponent(ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("gui.cancel", "[Cancel]"));
         cancel.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/economygui reset"));
         message.addExtra(cancel);
         player.spigot().sendMessage(message);
         pendingActions.put(player.getUniqueId(), (msg, p) -> {
             Bukkit.getScheduler().runTask(plugin, () -> {
                 if (msg.equalsIgnoreCase("cancel") || msg.equalsIgnoreCase("отмена")) {
-                    p.sendMessage(ChatColor.YELLOW + plugin.getMessage("messages.action-cancelled", "Action cancelled."));
+                    p.sendMessage(ChatColor.YELLOW + EconomyGUI.getMessageUtil().getMessage("messages.action-cancelled", "Action cancelled."));
                     openMainGUI(p);
                     pendingActions.remove(p.getUniqueId());
                     pendingActionType.remove(p.getUniqueId());
@@ -770,13 +766,13 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
                 try {
                     double amount = Double.parseDouble(msg.trim());
                     if (amount <= 0) {
-                        p.sendMessage(ChatColor.RED + plugin.getMessage("error.invalid-amount", "Amount must be positive."));
+                        p.sendMessage(ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("error.invalid-amount", "Amount must be positive."));
                         openMainGUI(p);
                         return;
                     }
                     Set<UUID> selected = playerSelections.getOrDefault(p.getUniqueId(), Collections.emptySet());
                     if (selected.isEmpty()) {
-                        p.sendMessage(ChatColor.RED + plugin.getMessage("error.no-players-selected", "No players selected."));
+                        p.sendMessage(ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("error.no-players-selected", "No players selected."));
                         openMainGUI(p);
                         return;
                     }
@@ -786,28 +782,28 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
                         if (target.getName() == null) continue;
                         boolean success = false;
                         if (action.equals("mass-give")) {
-                            success = plugin.getEconomy().depositPlayer(target, amount).transactionSuccess();
+                            success = plugin.getEcon().depositPlayer(target, amount).transactionSuccess();
                             if (success) logTransaction(uuid.toString(), "give", amount, p);
                         } else if (action.equals("mass-take")) {
-                            if (plugin.getEconomy().getBalance(target) >= amount) {
-                                success = plugin.getEconomy().withdrawPlayer(target, amount).transactionSuccess();
+                            if (plugin.getEcon().getBalance(target) >= amount) {
+                                success = plugin.getEcon().withdrawPlayer(target, amount).transactionSuccess();
                                 if (success) logTransaction(uuid.toString(), "take", amount, p);
                             }
                         } else if (action.equals("mass-set")) {
-                            double current = plugin.getEconomy().getBalance(target);
-                            plugin.getEconomy().withdrawPlayer(target, current);
-                            success = plugin.getEconomy().depositPlayer(target, amount).transactionSuccess();
+                            double current = plugin.getEcon().getBalance(target);
+                            plugin.getEcon().withdrawPlayer(target, current);
+                            success = plugin.getEcon().depositPlayer(target, amount).transactionSuccess();
                             if (success) logTransaction(uuid.toString(), "set", amount, p);
                         }
                         if (success) successCount++;
                     }
                     String actionName = action.equals("mass-give") ? "gave" : action.equals("mass-take") ? "took" : "set";
-                    p.sendMessage(ChatColor.GREEN + plugin.getMessage("messages.mass-action-applied",
+                    p.sendMessage(ChatColor.GREEN + EconomyGUI.getMessageUtil().getMessage("messages.mass-action-applied",
                             "Applied %action% of $%amount% to %count% players",
                             "%action%", actionName, "%amount%", String.format(moneyFormat, amount), "%count%", String.valueOf(successCount)));
                     openMainGUI(p);
                 } catch (NumberFormatException e) {
-                    p.sendMessage(ChatColor.RED + plugin.getMessage("error.invalid-amount-format", "Invalid amount format."));
+                    p.sendMessage(ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("error.invalid-amount-format", "Invalid amount format."));
                     openMainGUI(p);
                 }
                 pendingActions.remove(p.getUniqueId());
@@ -832,7 +828,7 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
         String displayName = clicked.getItemMeta() != null ? clicked.getItemMeta().getDisplayName() : "";
         long now = System.currentTimeMillis();
 
-        if (event.getView().getTitle().equals(ChatColor.DARK_PURPLE + plugin.getMessage("gui.stats-title", "Economy Statistics"))) {
+        if (event.getView().getTitle().equals(ChatColor.DARK_PURPLE + EconomyGUI.getMessageUtil().getMessage("gui.stats-title", "Economy Statistics"))) {
             if (event.getSlot() == 49) {
                 player.closeInventory();
                 openLastGUIMenu(player);
@@ -881,7 +877,7 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
             } else if (slot == 48) {
                 Set<UUID> selected = playerSelections.getOrDefault(playerUUID, Collections.emptySet());
                 if (selected.isEmpty()) {
-                    player.sendMessage(ChatColor.RED + plugin.getMessage("error.no-players-selected", "No players selected."));
+                    player.sendMessage(ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("error.no-players-selected", "No players selected."));
                     return;
                 }
                 openMassActionsMenu(player);
@@ -890,8 +886,8 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
                     resetSearch(player);
                 } else if (event.getClick() == ClickType.LEFT) {
                     player.closeInventory();
-                    TextComponent message = new TextComponent(ChatColor.YELLOW + plugin.getMessage("gui.enter-search", "Enter name or UUID to search: "));
-                    TextComponent cancel = new TextComponent(ChatColor.RED + plugin.getMessage("gui.cancel", "[Cancel]"));
+                    TextComponent message = new TextComponent(ChatColor.YELLOW + EconomyGUI.getMessageUtil().getMessage("gui.enter-search", "Enter name or UUID to search: "));
+                    TextComponent cancel = new TextComponent(ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("gui.cancel", "[Cancel]"));
                     cancel.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/economygui reset"));
                     message.addExtra(cancel);
                     player.spigot().sendMessage(message);
@@ -984,15 +980,15 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
             if (slot == 13) {
                 player.closeInventory();
                 if (player.hasPermission("economygui.give")) {
-                    TextComponent message = new TextComponent(ChatColor.YELLOW + plugin.getMessage("gui.enter-amount", "Enter amount in chat (or 'cancel' to abort):"));
-                    TextComponent cancel = new TextComponent(ChatColor.RED + plugin.getMessage("gui.cancel", "[Cancel]"));
+                    TextComponent message = new TextComponent(ChatColor.YELLOW + EconomyGUI.getMessageUtil().getMessage("gui.enter-amount", "Enter amount in chat (or 'cancel' to abort):"));
+                    TextComponent cancel = new TextComponent(ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("gui.cancel", "[Cancel]"));
                     cancel.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/economygui reset"));
                     message.addExtra(cancel);
                     player.spigot().sendMessage(message);
                     pendingActions.put(playerUUID, (msg, p) -> {
                         Bukkit.getScheduler().runTask(plugin, () -> {
                             if (msg.equalsIgnoreCase("cancel") || msg.equalsIgnoreCase("отмена")) {
-                                p.sendMessage(ChatColor.YELLOW + plugin.getMessage("messages.input-cancelled", "Input cancelled."));
+                                p.sendMessage(ChatColor.YELLOW + EconomyGUI.getMessageUtil().getMessage("messages.input-cancelled", "Input cancelled."));
                                 openPlayerFinanceManagement(p, result);
                                 pendingActions.remove(p.getUniqueId());
                                 return;
@@ -1000,44 +996,44 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
                             try {
                                 double amount = Double.parseDouble(msg.trim());
                                 if (amount <= 0) {
-                                    p.sendMessage(ChatColor.RED + plugin.getMessage("error.invalid-amount", "Amount must be positive."));
+                                    p.sendMessage(ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("error.invalid-amount", "Amount must be positive."));
                                     openPlayerFinanceManagement(p, result);
                                     return;
                                 }
                                 OfflinePlayer target = Bukkit.getOfflinePlayer(UUID.fromString(result.uuid));
-                                if (plugin.getEconomy().depositPlayer(target, amount).transactionSuccess()) {
-                                    p.sendMessage(ChatColor.GREEN + plugin.getMessage("messages.gave-amount",
+                                if (plugin.getEcon().depositPlayer(target, amount).transactionSuccess()) {
+                                    p.sendMessage(ChatColor.GREEN + EconomyGUI.getMessageUtil().getMessage("messages.gave-amount",
                                             "Gave $%amount% to %player%", "%amount%", String.format(moneyFormat, amount), "%player%", result.name));
                                     logTransaction(result.uuid, "give", amount, p);
                                 } else {
-                                    p.sendMessage(ChatColor.RED + plugin.getMessage("error.action-failed", "Action failed."));
+                                    p.sendMessage(ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("error.action-failed", "Action failed."));
                                 }
                             } catch (NumberFormatException e) {
-                                p.sendMessage(ChatColor.RED + plugin.getMessage("error.invalid-amount-format", "Invalid amount format."));
+                                p.sendMessage(ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("error.invalid-amount-format", "Invalid amount format."));
                             }
                             openPlayerFinanceManagement(p, result);
                             pendingActions.remove(p.getUniqueId());
                         });
                     });
                 } else {
-                    player.sendMessage(ChatColor.RED + plugin.getMessage("messages.no-permission-give", "You don't have permission to give."));
+                    player.sendMessage(ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("messages.no-permission-give", "You don't have permission to give."));
                     openPlayerFinanceManagement(player, result);
                 }
             } else if (slot == 20) {
-                openDigitalMenu(player, plugin.getMessage("action.give", "Give"), result);
+                openDigitalMenu(player, EconomyGUI.getMessageUtil().getMessage("action.give", "Give"), result);
             } else if (slot == 22) {
-                openDigitalMenu(player, plugin.getMessage("action.take", "Take"), result);
+                openDigitalMenu(player, EconomyGUI.getMessageUtil().getMessage("action.take", "Take"), result);
             } else if (slot == 24) {
                 player.closeInventory();
-                TextComponent message = new TextComponent(ChatColor.YELLOW + plugin.getMessage("gui.enter-amount", "Enter amount in chat (or 'cancel' to abort):"));
-                TextComponent cancel = new TextComponent(ChatColor.RED + plugin.getMessage("gui.cancel", "[Cancel]"));
+                TextComponent message = new TextComponent(ChatColor.YELLOW + EconomyGUI.getMessageUtil().getMessage("gui.enter-amount", "Enter amount in chat (or 'cancel' to abort):"));
+                TextComponent cancel = new TextComponent(ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("gui.cancel", "[Cancel]"));
                 cancel.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/economygui reset"));
                 message.addExtra(cancel);
                 player.spigot().sendMessage(message);
                 pendingActions.put(playerUUID, (msg, p) -> {
                     Bukkit.getScheduler().runTask(plugin, () -> {
                         if (msg.equalsIgnoreCase("cancel") || msg.equalsIgnoreCase("отмена")) {
-                            p.sendMessage(ChatColor.YELLOW + plugin.getMessage("messages.input-cancelled", "Input cancelled."));
+                            p.sendMessage(ChatColor.YELLOW + EconomyGUI.getMessageUtil().getMessage("messages.input-cancelled", "Input cancelled."));
                             openPlayerFinanceManagement(p, result);
                             pendingActions.remove(p.getUniqueId());
                             return;
@@ -1045,22 +1041,22 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
                         try {
                             double amount = Double.parseDouble(msg.trim());
                             if (amount < 0) {
-                                p.sendMessage(ChatColor.RED + plugin.getMessage("error.negative-amount", "Amount cannot be negative."));
+                                p.sendMessage(ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("error.negative-amount", "Amount cannot be negative."));
                                 openPlayerFinanceManagement(p, result);
                                 return;
                             }
                             OfflinePlayer target = Bukkit.getOfflinePlayer(UUID.fromString(result.uuid));
-                            double current = plugin.getEconomy().getBalance(target);
-                            if (plugin.getEconomy().withdrawPlayer(target, current).transactionSuccess() &&
-                                    plugin.getEconomy().depositPlayer(target, amount).transactionSuccess()) {
-                                p.sendMessage(ChatColor.GREEN + plugin.getMessage("messages.set-amount",
+                            double current = plugin.getEcon().getBalance(target);
+                            if (plugin.getEcon().withdrawPlayer(target, current).transactionSuccess() &&
+                                    plugin.getEcon().depositPlayer(target, amount).transactionSuccess()) {
+                                p.sendMessage(ChatColor.GREEN + EconomyGUI.getMessageUtil().getMessage("messages.set-amount",
                                         "Set balance to $%amount% for %player%", "%amount%", String.format(moneyFormat, amount), "%player%", result.name));
                                 logTransaction(result.uuid, "set", amount, p);
                             } else {
-                                p.sendMessage(ChatColor.RED + plugin.getMessage("error.action-failed", "Action failed."));
+                                p.sendMessage(ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("error.action-failed", "Action failed."));
                             }
                         } catch (NumberFormatException e) {
-                            p.sendMessage(ChatColor.RED + plugin.getMessage("error.invalid-amount-format", "Invalid amount format."));
+                            p.sendMessage(ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("error.invalid-amount-format", "Invalid amount format."));
                         }
                         openPlayerFinanceManagement(p, result);
                         pendingActions.remove(p.getUniqueId());
@@ -1101,37 +1097,37 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
             if (result == null) return;
             if (slotClicked == 16) {
                 double amount = pendingActionAmount.getOrDefault(playerUUID, 0.0);
-                String action = pendingActionType.getOrDefault(playerUUID, plugin.getMessage("action.give", "Give"));
+                String action = pendingActionType.getOrDefault(playerUUID, EconomyGUI.getMessageUtil().getMessage("action.give", "Give"));
                 if (amount <= 0) {
-                    player.sendMessage(ChatColor.RED + plugin.getMessage("error.invalid-amount", "Amount must be positive."));
+                    player.sendMessage(ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("error.invalid-amount", "Amount must be positive."));
                     return;
                 }
                 OfflinePlayer target = Bukkit.getOfflinePlayer(UUID.fromString(result.uuid));
                 boolean success = false;
-                if (action.equals(plugin.getMessage("action.give", "Give"))) {
-                    success = plugin.getEconomy().depositPlayer(target, amount).transactionSuccess();
+                if (action.equals(EconomyGUI.getMessageUtil().getMessage("action.give", "Give"))) {
+                    success = plugin.getEcon().depositPlayer(target, amount).transactionSuccess();
                     if (success) logTransaction(result.uuid, "give", amount, player);
-                } else if (action.equals(plugin.getMessage("action.take", "Take"))) {
-                    if (plugin.getEconomy().getBalance(target) >= amount) {
-                        success = plugin.getEconomy().withdrawPlayer(target, amount).transactionSuccess();
+                } else if (action.equals(EconomyGUI.getMessageUtil().getMessage("action.take", "Take"))) {
+                    if (plugin.getEcon().getBalance(target) >= amount) {
+                        success = plugin.getEcon().withdrawPlayer(target, amount).transactionSuccess();
                         if (success) logTransaction(result.uuid, "take", amount, player);
                     } else {
-                        player.sendMessage(ChatColor.RED + plugin.getMessage("error.insufficient-funds",
+                        player.sendMessage(ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("error.insufficient-funds",
                                 "Insufficient funds for %player%", "player", target.getName()));
                     }
                 }
                 if (success) {
-                    player.sendMessage(ChatColor.GREEN + plugin.getMessage("action.executed",
+                    player.sendMessage(ChatColor.GREEN + EconomyGUI.getMessageUtil().getMessage("action.executed",
                             "Executed %action% of $%amount% for %player%", "action", action, "amount", String.format(moneyFormat, amount), "player", result.name));
                 } else {
-                    player.sendMessage(ChatColor.RED + plugin.getMessage("error.action-failed", "Action failed."));
+                    player.sendMessage(ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("error.action-failed", "Action failed."));
                 }
                 pendingActionAmount.put(playerUUID, 0.0);
                 refreshGUI();
                 openPlayerFinanceManagement(player, result);
             } else if (slotClicked == 18) {
                 pendingActionAmount.put(playerUUID, 0.0);
-                player.sendMessage(ChatColor.YELLOW + plugin.getMessage("gui.amount-selected",
+                player.sendMessage(ChatColor.YELLOW + EconomyGUI.getMessageUtil().getMessage("gui.amount-selected",
                         "Selected amount: %amount%", "amount", "0"));
                 openDigitalMenu(player, pendingActionType.get(playerUUID), result);
             } else if (slotClicked == 26) {
@@ -1142,14 +1138,14 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
                 if (index >= 0 && index < amounts.length) {
                     double currentAmount = pendingActionAmount.getOrDefault(playerUUID, 0.0);
                     pendingActionAmount.put(playerUUID, currentAmount + amounts[index]);
-                    player.sendMessage(ChatColor.GREEN + plugin.getMessage("gui.amount-selected",
+                    player.sendMessage(ChatColor.GREEN + EconomyGUI.getMessageUtil().getMessage("gui.amount-selected",
                             "Selected amount: %amount%", "amount", String.valueOf(amounts[index])));
                     openDigitalMenu(player, pendingActionType.get(playerUUID), result);
                 }
             } else if (slotClicked == 22) {
                 player.closeInventory();
-                TextComponent message = new TextComponent(ChatColor.YELLOW + plugin.getMessage("gui.enter-custom", "Enter custom amount: "));
-                TextComponent cancel = new TextComponent(ChatColor.RED + plugin.getMessage("gui.cancel", "[Cancel]"));
+                TextComponent message = new TextComponent(ChatColor.YELLOW + EconomyGUI.getMessageUtil().getMessage("gui.enter-custom", "Enter custom amount: "));
+                TextComponent cancel = new TextComponent(ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("gui.cancel", "[Cancel]"));
                 cancel.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/economygui reset"));
                 message.addExtra(cancel);
                 player.spigot().sendMessage(message);
@@ -1157,7 +1153,7 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
                     Bukkit.getScheduler().runTask(plugin, () -> {
                         String input = ChatColor.stripColor(msg.trim());
                         if (input.equalsIgnoreCase("cancel") || input.equalsIgnoreCase("отмена")) {
-                            p.sendMessage(ChatColor.YELLOW + plugin.getMessage("messages.input-cancelled", "Input cancelled."));
+                            p.sendMessage(ChatColor.YELLOW + EconomyGUI.getMessageUtil().getMessage("messages.input-cancelled", "Input cancelled."));
                             openDigitalMenu(p, pendingActionType.get(p.getUniqueId()), pendingActionTarget.get(p.getUniqueId()));
                             pendingActions.remove(p.getUniqueId());
                             return;
@@ -1165,17 +1161,17 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
                         try {
                             double amount = Double.parseDouble(input);
                             if (amount <= 0) {
-                                p.sendMessage(ChatColor.RED + plugin.getMessage("error.invalid-amount", "Amount must be positive."));
+                                p.sendMessage(ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("error.invalid-amount", "Amount must be positive."));
                                 openDigitalMenu(p, pendingActionType.get(p.getUniqueId()), pendingActionTarget.get(p.getUniqueId()));
                                 return;
                             }
                             double currentAmount = pendingActionAmount.getOrDefault(p.getUniqueId(), 0.0);
                             pendingActionAmount.put(p.getUniqueId(), currentAmount + amount);
-                            p.sendMessage(ChatColor.GREEN + plugin.getMessage("gui.amount-selected",
+                            p.sendMessage(ChatColor.GREEN + EconomyGUI.getMessageUtil().getMessage("gui.amount-selected",
                                     "Selected amount: %amount%", "amount", String.valueOf(amount)));
                             openDigitalMenu(p, pendingActionType.get(p.getUniqueId()), pendingActionTarget.get(p.getUniqueId()));
                         } catch (NumberFormatException e) {
-                            p.sendMessage(ChatColor.RED + plugin.getMessage("error.invalid-amount-format", "Invalid amount format."));
+                            p.sendMessage(ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("error.invalid-amount-format", "Invalid amount format."));
                             openDigitalMenu(p, pendingActionType.get(p.getUniqueId()), pendingActionTarget.get(p.getUniqueId()));
                         }
                         pendingActions.remove(p.getUniqueId());
@@ -1187,7 +1183,7 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
                 PlayerResult result = getPlayerResultByName(lastTarget.get(player.getUniqueId()));
                 if (result != null) {
                     if (!plugin.isFullManagementEnabled()) {
-                        player.sendMessage(ChatColor.RED + plugin.getMessage("error.full-management-disabled", "Full management is disabled in config!"));
+                        player.sendMessage(ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("error.full-management-disabled", "Full management is disabled in config!"));
                         openMainGUI(player);
                         lastOpenedMenu.put(player.getUniqueId(), "main");
                     } else {
@@ -1238,7 +1234,7 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
                 if (action == null) return;
 
                 if (message.equalsIgnoreCase("cancel") || message.equalsIgnoreCase("отмена")) {
-                    player.sendMessage(ChatColor.YELLOW + plugin.getMessage("messages.input-cancelled", "Input cancelled."));
+                    player.sendMessage(ChatColor.YELLOW + EconomyGUI.getMessageUtil().getMessage("messages.input-cancelled", "Input cancelled."));
                     pendingActions.remove(player.getUniqueId());
                     openLastGUIMenu(player);
                     return;
@@ -1248,7 +1244,7 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
                     try {
                         double amount = Double.parseDouble(message.trim());
                         if ((actionType.equals("mass-set") && amount < 0) || (!actionType.equals("mass-set") && amount <= 0)) {
-                            player.sendMessage(ChatColor.RED + plugin.getMessage("error.invalid-amount", "Amount must be positive."));
+                            player.sendMessage(ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("error.invalid-amount", "Amount must be positive."));
                             openMassActionsMenu(player);
                             return;
                         }
@@ -1256,31 +1252,31 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
                         for (UUID uuid : selectedPlayers) {
                             OfflinePlayer target = Bukkit.getOfflinePlayer(uuid);
                             if (actionType.equals("mass-give")) {
-                                if (plugin.getEconomy().depositPlayer(target, amount).transactionSuccess()) {
+                                if (plugin.getEcon().depositPlayer(target, amount).transactionSuccess()) {
                                     count++;
                                     logTransaction(uuid.toString(), "give", amount, player);
                                 }
                             } else if (actionType.equals("mass-take")) {
-                                if (plugin.getEconomy().getBalance(target) >= amount) {
-                                    if (plugin.getEconomy().withdrawPlayer(target, amount).transactionSuccess()) {
+                                if (plugin.getEcon().getBalance(target) >= amount) {
+                                    if (plugin.getEcon().withdrawPlayer(target, amount).transactionSuccess()) {
                                         count++;
                                         logTransaction(uuid.toString(), "take", amount, player);
                                     }
                                 }
                             } else if (actionType.equals("mass-set")) {
-                                if (plugin.getEconomy().withdrawPlayer(target, plugin.getEconomy().getBalance(target)).transactionSuccess() &&
-                                        plugin.getEconomy().depositPlayer(target, amount).transactionSuccess()) {
+                                if (plugin.getEcon().withdrawPlayer(target, plugin.getEcon().getBalance(target)).transactionSuccess() &&
+                                        plugin.getEcon().depositPlayer(target, amount).transactionSuccess()) {
                                     count++;
                                     logTransaction(uuid.toString(), "set", amount, player);
                                 }
                             }
                         }
-                        player.sendMessage(ChatColor.GREEN + plugin.getMessage("messages.mass-action-applied",
+                        player.sendMessage(ChatColor.GREEN + EconomyGUI.getMessageUtil().getMessage("messages.mass-action-applied",
                                 "Applied %action% on $%amount% to %count% players", "action", actionType.replace("mass-", ""),
                                 "amount", String.format(moneyFormat, amount), "count", String.valueOf(count)));
                         openMassActionsMenu(player);
                     } catch (NumberFormatException e) {
-                        player.sendMessage(ChatColor.RED + plugin.getMessage("error.invalid-amount-format", "Invalid amount format."));
+                        player.sendMessage(ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("error.invalid-amount-format", "Invalid amount format."));
                         openMassActionsMenu(player);
                     }
                     pendingActions.remove(player.getUniqueId());
@@ -1303,7 +1299,7 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
         PlayerResult result = getPlayerResultByName(lastTarget.get(player.getUniqueId()));
         if (result == null) return;
         OfflinePlayer target = Bukkit.getOfflinePlayer(UUID.fromString(result.uuid));
-        Economy econ = plugin.getEconomy();
+        Economy econ = plugin.getEcon();
 
         boolean success = false;
         if (action.equals("give")) {
@@ -1312,7 +1308,7 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
             if (econ.getBalance(target) >= amount) {
                 success = econ.withdrawPlayer(target, amount).transactionSuccess();
             } else {
-                player.sendMessage(ChatColor.RED + plugin.getMessage("error.insufficient-funds", "Insufficient funds for %player%", "player", result.name));
+                player.sendMessage(ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("error.insufficient-funds", "Insufficient funds for %player%", "player", result.name));
                 return;
             }
         } else if (action.equals("set")) {
@@ -1322,9 +1318,9 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
 
         if (success) {
             logTransaction(result.uuid, action, amount, player);
-            player.sendMessage(ChatColor.GREEN + plugin.getMessage("action.executed", "Executed %action% of $%amount% for %player%", "action", action, "amount", String.format(moneyFormat, amount), "player", result.name));
+            player.sendMessage(ChatColor.GREEN + EconomyGUI.getMessageUtil().getMessage("action.executed", "Executed %action% of $%amount% for %player%", "action", action, "amount", String.format(moneyFormat, amount), "player", result.name));
         } else {
-            player.sendMessage(ChatColor.RED + plugin.getMessage("error.action-failed", "Action failed."));
+            player.sendMessage(ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("error.action-failed", "Action failed."));
         }
         openContextMenu(player, result.name);
     }
@@ -1370,8 +1366,8 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
     }
 
     public void cleanOldTransactions() {
-        if (plugin.transactionRetentionDays <= 0) return;
-        long cutoff = System.currentTimeMillis() - (plugin.transactionRetentionDays * 86400000L);
+        if (plugin.getTransactionRetentionDays() <= 0) return;
+        long cutoff = System.currentTimeMillis() - (plugin.getTransactionRetentionDays() * 86400000L);
         for (List<Transaction> list : transactionHistory.values()) {
             list.removeIf(t -> t.timestamp < cutoff);
         }
@@ -1409,7 +1405,7 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
     }
     private List<PlayerResult> getAllPlayersWithBalances() {
         List<PlayerResult> results = new ArrayList<>();
-        Economy econ = plugin.getEconomy();
+        Economy econ = plugin.getEcon();
 
         for (OfflinePlayer offline : Bukkit.getOfflinePlayers()) {
             if (offline.getName() == null) continue;
@@ -1434,14 +1430,14 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
         }
     }
     private void openGlobalStatsMenu(Player player) {
-        player.sendMessage(ChatColor.YELLOW + plugin.getMessage("gui.stats-loading", "Loading economy statistics"));
+        player.sendMessage(ChatColor.YELLOW + EconomyGUI.getMessageUtil().getMessage("gui.stats-loading", "Loading economy statistics"));
 
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             List<PlayerResult> allPlayers = getAllPlayersWithBalances();
 
             if (allPlayers.isEmpty()) {
                 Bukkit.getScheduler().runTask(plugin, () -> {
-                    player.sendMessage(ChatColor.RED + plugin.getMessage("error.no-players", "No players found."));
+                    player.sendMessage(ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("error.no-players", "No players found."));
                 });
                 return;
             }
@@ -1497,22 +1493,22 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
             final List<PlayerResult> finalTopPoor = topPoor;
 
             Bukkit.getScheduler().runTask(plugin, () -> {
-                Inventory statsInv = Bukkit.createInventory(new StatsMenuHolder(null), 54, ChatColor.DARK_PURPLE + plugin.getMessage("gui.stats-title", "Economy Statistics"));
+                Inventory statsInv = Bukkit.createInventory(new StatsMenuHolder(null), 54, ChatColor.DARK_PURPLE + EconomyGUI.getMessageUtil().getMessage("gui.stats-title", "Economy Statistics"));
 
                 ItemStack info = new ItemStack(Material.BOOK);
                 ItemMeta meta = info.getItemMeta();
-                meta.setDisplayName(ChatColor.YELLOW + plugin.getMessage("gui.stats-overview", "Server Economy Overview"));
+                meta.setDisplayName(ChatColor.YELLOW + EconomyGUI.getMessageUtil().getMessage("gui.stats-overview", "Server Economy Overview"));
                 List<String> lore = new ArrayList<>();
-                lore.add(ChatColor.GRAY + plugin.getMessage("gui.stats-total-players", "Total players: ") + ChatColor.WHITE + finalPlayerCount);
-                lore.add(ChatColor.GRAY + plugin.getMessage("gui.stats-online-players", "Online players: ") + ChatColor.GREEN + finalOnlineCount);
-                lore.add(ChatColor.GRAY + plugin.getMessage("gui.stats-total-balance", "Total balance: ") + ChatColor.GREEN + String.format(moneyFormat, finalTotalBalance));
-                lore.add(ChatColor.GRAY + plugin.getMessage("gui.stats-online-balance", "Online balance: ") + ChatColor.GREEN + String.format(moneyFormat, finalOnlineBalance));
-                lore.add(ChatColor.GRAY + plugin.getMessage("gui.stats-average-balance", "Average balance: ") + ChatColor.GREEN + String.format(moneyFormat, finalAverage));
-                lore.add(ChatColor.GRAY + plugin.getMessage("gui.stats-average-online", "Avg online balance: ") + ChatColor.GREEN + String.format(moneyFormat, finalAverageOnline));
+                lore.add(ChatColor.GRAY + EconomyGUI.getMessageUtil().getMessage("gui.stats-total-players", "Total players: ") + ChatColor.WHITE + finalPlayerCount);
+                lore.add(ChatColor.GRAY + EconomyGUI.getMessageUtil().getMessage("gui.stats-online-players", "Online players: ") + ChatColor.GREEN + finalOnlineCount);
+                lore.add(ChatColor.GRAY + EconomyGUI.getMessageUtil().getMessage("gui.stats-total-balance", "Total balance: ") + ChatColor.GREEN + String.format(moneyFormat, finalTotalBalance));
+                lore.add(ChatColor.GRAY + EconomyGUI.getMessageUtil().getMessage("gui.stats-online-balance", "Online balance: ") + ChatColor.GREEN + String.format(moneyFormat, finalOnlineBalance));
+                lore.add(ChatColor.GRAY + EconomyGUI.getMessageUtil().getMessage("gui.stats-average-balance", "Average balance: ") + ChatColor.GREEN + String.format(moneyFormat, finalAverage));
+                lore.add(ChatColor.GRAY + EconomyGUI.getMessageUtil().getMessage("gui.stats-average-online", "Avg online balance: ") + ChatColor.GREEN + String.format(moneyFormat, finalAverageOnline));
                 lore.add("");
-                lore.add(ChatColor.GRAY + plugin.getMessage("gui.stats-richest", "Richest: ") + ChatColor.GOLD + (finalRichest != null ? finalRichest.name : "—") +
+                lore.add(ChatColor.GRAY + EconomyGUI.getMessageUtil().getMessage("gui.stats-richest", "Richest: ") + ChatColor.GOLD + (finalRichest != null ? finalRichest.name : "—") +
                         " (" + String.format(moneyFormat, finalRichest != null ? finalRichest.balance : 0) + ")");
-                lore.add(ChatColor.GRAY + plugin.getMessage("gui.stats-poorest", "Poorest: ") + ChatColor.RED + (finalPoorest != null ? finalPoorest.name : "—") +
+                lore.add(ChatColor.GRAY + EconomyGUI.getMessageUtil().getMessage("gui.stats-poorest", "Poorest: ") + ChatColor.RED + (finalPoorest != null ? finalPoorest.name : "—") +
                         " (" + String.format(moneyFormat, finalPoorest != null ? finalPoorest.balance : 0) + ")");
                 meta.setLore(lore);
                 info.setItemMeta(meta);
@@ -1520,7 +1516,7 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
 
                 ItemStack topRichItem = new ItemStack(Material.DIAMOND);
                 ItemMeta topRichMeta = topRichItem.getItemMeta();
-                topRichMeta.setDisplayName(ChatColor.GOLD + plugin.getMessage("gui.stats-top-rich", "Top 5 Richest"));
+                topRichMeta.setDisplayName(ChatColor.GOLD + EconomyGUI.getMessageUtil().getMessage("gui.stats-top-rich", "Top 5 Richest"));
                 List<String> richLore = new ArrayList<>();
                 int pos = 1;
                 for (PlayerResult pr : finalTopRich) {
@@ -1533,7 +1529,7 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
 
                 ItemStack topPoorItem = new ItemStack(Material.IRON_INGOT);
                 ItemMeta topPoorMeta = topPoorItem.getItemMeta();
-                topPoorMeta.setDisplayName(ChatColor.RED + plugin.getMessage("gui.stats-top-poor", "Top 5 Poorest"));
+                topPoorMeta.setDisplayName(ChatColor.RED + EconomyGUI.getMessageUtil().getMessage("gui.stats-top-poor", "Top 5 Poorest"));
                 List<String> poorLore = new ArrayList<>();
                 pos = 1;
                 for (PlayerResult pr : finalTopPoor) {
@@ -1546,9 +1542,9 @@ public class EconomySearchGUI implements Listener, InventoryHolder {
 
                 ItemStack back = new ItemStack(Material.ARROW);
                 ItemMeta backMeta = back.getItemMeta();
-                backMeta.setDisplayName(ChatColor.YELLOW + plugin.getMessage("gui.back", "Back"));
+                backMeta.setDisplayName(ChatColor.YELLOW + EconomyGUI.getMessageUtil().getMessage("gui.back", "Back"));
                 List<String> backLore = new ArrayList<>();
-                backLore.add(ChatColor.GRAY + plugin.getMessage("gui.click-to-return", "Return to main menu"));
+                backLore.add(ChatColor.GRAY + EconomyGUI.getMessageUtil().getMessage("gui.click-to-return", "Return to main menu"));
                 backMeta.setLore(backLore);
                 back.setItemMeta(backMeta);
                 statsInv.setItem(49, back);

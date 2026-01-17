@@ -58,6 +58,10 @@
             <id>phoenix616</id>
             <url>https://repo.phoenix616.dev/</url>
         </repository>
+        <repository>
+            <id>tcoded-releases</id>
+            <url>https://repo.tcoded.com/releases</url>
+        </repository>
     </repositories>
 
     <dependencies>
@@ -109,6 +113,12 @@
             <version>1.18.40</version>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>com.tcoded</groupId>
+            <artifactId>FoliaLib</artifactId>
+            <version>0.5.1</version>
+            <scope>compile</scope>
+        </dependency>
     </dependencies>
     <build>
         <plugins>
@@ -121,7 +131,11 @@
                         <relocation>
                             <pattern>org.bstats</pattern>
                             <!-- Replace this with your package! -->
-                            <shadedPattern>ru.stepanyaa.economyGUI</shadedPattern>
+                            <shadedPattern>ru.stepanyaa.economyGUI.libs.bstats</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>com.tcoded.folialib</pattern>
+                            <shadedPattern>ru.stepanyaa.economyGUI.libs.folialib</shadedPattern>
                         </relocation>
                     </relocations>
                 </configuration>

@@ -24,76 +24,57 @@
  */
 package ru.stepanyaa.economyGUI;
 
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
-import org.bukkit.command.PluginCommand;
-import org.bukkit.command.TabCompleter;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.entity.Player;
-import org.bukkit.plugin.RegisteredServiceProvider;
-import org.bukkit.plugin.java.JavaPlugin;
-import net.milkbowl.vault.economy.Economy;
-import ru.stepanyaa.economyGUI.commands.EcoGuiCommand;
-import ru.stepanyaa.economyGUI.utils.CommonUtil;
-
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonParser;
-
 import lombok.Getter;
 import lombok.Setter;
+import net.milkbowl.vault.economy.Economy;
+import org.bukkit.command.PluginCommand;
+import org.bukkit.plugin.RegisteredServiceProvider;
+import org.bukkit.plugin.java.JavaPlugin;
+import ru.stepanyaa.economyGUI.commands.EcoGuiCommand;
+import ru.stepanyaa.economyGUI.utils.CommonUtil;
+import ru.stepanyaa.economyGUI.utils.MessageUtil;
+
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class EconomyGUI extends JavaPlugin {
 	@Getter
 	private static EconomyGUI instance;
+    @Getter
+    private static MessageUtil messageUtil;
 	@Getter
 	private CommonUtil common;
+    @Getter
+    private EconomySearchGUI economySearchGUI;
 	
-    public static final String CURRENT_VERSION = null;
-	
+    public static String CURRENT_VERSION;
+    public boolean isFirstEnable = true;
+
 	@Getter
     private Economy econ = null;
-    private FileConfiguration messagesConfig;
-    private FileConfiguration transactionsConfig;
-    private File transactionsFile;
-    private String language;
-    private EconomySearchGUI economySearchGUI;
     @Getter
     private final Set<String> adminUUIDs = ConcurrentHashMap.newKeySet();
-    @Setter @Getter
-    private String latestVersion = null;
-    
-    @Getter
+
+    @Getter @Setter
+    private String language;
+
+    @Getter @Setter
     private boolean playerSelectionEnabled;
-    @Getter
+    @Getter @Setter
     private boolean massOperationsEnabled;
-    @Getter
+    @Getter @Setter
     private boolean quickActionsEnabled;
-    @Getter
+    @Getter @Setter
     private boolean fullManagementEnabled;
-    
-    public int transactionRetentionDays;
-    private boolean isFirstEnable = true;
-    private File messagesFile;
+    @Getter @Setter
+    private int transactionRetentionDays;
 
     @Override
     public void onEnable() {
     	instance = this;
     	CURRENT_VERSION = getDescription().getVersion();
         if (!setupEconomy()) {
-            getLogger().severe(getMessage("warning.no-economy", "Economy provider not found! Disabling plugin."));
+            getLogger().severe(messageUtil.getMessage("warning.no-economy", "Economy provider not found! Disabling plugin."));
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
@@ -113,23 +94,19 @@ public class EconomyGUI extends JavaPlugin {
         transactionRetentionDays = getConfig().getInt("features.transaction-retention-days", 30);
         
         //MESSAGES
-        loadMessages();
-        if (messagesConfig == null) {
-            getLogger().severe("Failed to load messages configuration. Disabling plugin.");
-            getServer().getPluginManager().disablePlugin(this);
-            return;
-        }
+        messageUtil = new MessageUtil();
+        if (messageUtil.init()) return;
         
         //WARNING: FUCTION LIMITED
         if (!playerSelectionEnabled && !massOperationsEnabled && !quickActionsEnabled && !fullManagementEnabled) {
-            getLogger().warning(getMessage("error.all-features-disabled", "All features are disabled in config! Commands will be limited."));
+            getLogger().warning(messageUtil.getMessage("error.all-features-disabled", "All features are disabled in config! Commands will be limited."));
         }
         
         //ECONOMY GUI
         economySearchGUI = new EconomySearchGUI(this);
         getServer().getPluginManager().registerEvents(economySearchGUI, this);
         
-        loadTransactions();
+        messageUtil.loadTransactions();
         PluginCommand command = getCommand("economygui");
         if (command != null) {
             command.setExecutor(new EcoGuiCommand());
@@ -140,14 +117,14 @@ public class EconomyGUI extends JavaPlugin {
         
         
         adminUUIDs.addAll(getConfig().getStringList("admin-uuids"));
-        getLogger().info(getMessage("warning.plugin-enabled", "EconomyGUI enabled with language: %lang%", "lang", language));
-        checkForUpdates();
+        getLogger().info(messageUtil.getMessage("warning.plugin-enabled", "EconomyGUI enabled with language: %lang%", "lang", language));
+        common.checkForUpdates();
         this.isFirstEnable = false;
     }
     
     @Override
     public void onDisable() {
-        saveTransactions();
+        messageUtil.saveTransactions();
         getLogger().info("EconomyGUI disabled.");
     }
     
@@ -161,20 +138,5 @@ public class EconomyGUI extends JavaPlugin {
         }
         econ = rsp.getProvider();
         return econ != null;
-    }
-    
-    public void reloadPlugin(Player player) {
-        reloadConfig();
-        language = getConfig().getString("language", "en");
-        loadMessages();
-        loadTransactions();
-        common.updateConfigFile();
-        transactionRetentionDays = getConfig().getInt("features.transaction-retention-days", 30);
-        playerSelectionEnabled = getConfig().getBoolean("features.player-selection", true);
-        massOperationsEnabled = getConfig().getBoolean("features.mass-operations", true);
-        quickActionsEnabled = getConfig().getBoolean("features.quick-actions", true);
-        fullManagementEnabled = getConfig().getBoolean("features.full-management", true);
-        economySearchGUI.refreshOpenGUIs();
-        player.sendMessage(ChatColor.GREEN + getMessage("action.config-reloaded", "Configuration reloaded."));
     }
 }

@@ -1,73 +1,94 @@
 package ru.stepanyaa.economyGUI.utils;
 
+import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
+import ru.stepanyaa.economyGUI.EconomyGUI;
+
 import java.io.File;
 import java.io.IOException;
 
-import org.bukkit.ChatColor;
-import org.bukkit.configuration.file.YamlConfiguration;
-
 public class MessageUtil {
-	private void loadMessages() {
-        String messagesFileName = "messages_" + language + ".yml";
-        messagesFile = new File(getDataFolder(), messagesFileName);
+    private FileConfiguration messagesConfig;
+    private File messagesFile;
+
+    private FileConfiguration transactionsConfig;
+    private File transactionsFile;
+
+    public boolean init() {
+        loadMessages();
+        if (messagesConfig == null) {
+            EconomyGUI.getInstance().getLogger().severe("Failed to load messages configuration. Disabling plugin.");
+            Bukkit.getServer().getPluginManager().disablePlugin(EconomyGUI.getInstance());
+            return true;
+        }
+        return false;
+    }
+
+	public void loadMessages() {
+        String messagesFileName = "messages_" + EconomyGUI.getInstance().getLanguage() + ".yml";
+        messagesFile = new File(EconomyGUI.getInstance().getDataFolder(), messagesFileName);
         try {
             if (!messagesFile.exists()) {
-                if (getResource(messagesFileName) != null) {
-                    saveResource(messagesFileName, false);
-                    getLogger().info("Created messages file: " + messagesFileName);
+                if (EconomyGUI.getInstance().getResource(messagesFileName) != null) {
+                    EconomyGUI.getInstance().saveResource(messagesFileName, false);
+                    EconomyGUI.getInstance().getLogger().info("Created messages file: " + messagesFileName);
                 } else {
-                    getLogger().warning("Messages file " + messagesFileName + " not found in plugin!");
+                    EconomyGUI.getInstance().getLogger().warning("Messages file " + messagesFileName + " not found in plugin!");
                     messagesConfig = new YamlConfiguration();
                     return;
                 }
             }
             messagesConfig = YamlConfiguration.loadConfiguration(messagesFile);
             String currentFileVersion = messagesConfig.getString("version", "0.0.0");
-            if (!currentFileVersion.equals(CURRENT_VERSION)) {
-                if (getResource(messagesFileName) != null) {
-                    File backupFile = new File(getDataFolder(), messagesFileName + ".backup");
+            if (!currentFileVersion.equals(EconomyGUI.CURRENT_VERSION)) {
+                if (EconomyGUI.getInstance().getResource(messagesFileName) != null) {
+                    File backupFile = new File(EconomyGUI.getInstance().getDataFolder(), messagesFileName + ".backup");
                     if (messagesFile.renameTo(backupFile)) {
-                        getLogger().info("Backed up old messages file to: " + messagesFileName + ".backup");
+                        EconomyGUI.getInstance().getLogger().info("Backed up old messages file to: " + messagesFileName + ".backup");
                     }
-                    saveResource(messagesFileName, true);
+                    EconomyGUI.getInstance().saveResource(messagesFileName, true);
                     messagesConfig = YamlConfiguration.loadConfiguration(messagesFile);
-                    messagesConfig.set("version", CURRENT_VERSION);
+                    messagesConfig.set("version", EconomyGUI.CURRENT_VERSION);
                     messagesConfig.save(messagesFile);
-                    getLogger().info("Updated messages file " + messagesFileName + " to version " + CURRENT_VERSION);
+                    EconomyGUI.getInstance().getLogger().info("Updated messages file " + messagesFileName + " to version " + EconomyGUI.CURRENT_VERSION);
                 } else {
-                    getLogger().warning("Resource " + messagesFileName + " not found in plugin!");
+                    EconomyGUI.getInstance().getLogger().warning("Resource " + messagesFileName + " not found in plugin!");
                 }
-            } else if (isFirstEnable) {
-                getLogger().info("Messages file " + messagesFileName + " is up-to-date (version " + CURRENT_VERSION + ").");
+            } else if (EconomyGUI.getInstance().isFirstEnable) {
+                EconomyGUI.getInstance().getLogger().info("Messages file " + messagesFileName + " is up-to-date (version " + EconomyGUI.CURRENT_VERSION + ").");
             }
         } catch (Exception e) {
-            getLogger().severe("Failed to load messages file: " + e.getMessage());
+            EconomyGUI.getInstance().getLogger().severe("Failed to load messages file: " + e.getMessage());
             messagesConfig = new YamlConfiguration();
         }
     }
 
-    private void loadTransactions() {
-        transactionsFile = new File(getDataFolder(), "transactions.yml");
+    public void loadTransactions() {
+        transactionsFile = new File(EconomyGUI.getInstance().getDataFolder(), "transactions.yml");
         if (!transactionsFile.exists()) {
             try {
                 transactionsFile.createNewFile();
-                getLogger().info("Created transactions file: transactions.yml");
+                EconomyGUI.getInstance().getLogger().info("Created transactions file: transactions.yml");
             } catch (IOException e) {
-                getLogger().severe("Failed to create transactions.yml: " + e.getMessage());
+                EconomyGUI.getInstance().getLogger().severe("Failed to create transactions.yml: " + e.getMessage());
             }
         }
         transactionsConfig = YamlConfiguration.loadConfiguration(transactionsFile);
-        economySearchGUI.loadTransactionHistory(transactionsConfig);
+        EconomyGUI.getInstance().getEconomySearchGUI().loadTransactionHistory(transactionsConfig);
     }
+
     public void saveTransactions() {
-        economySearchGUI.cleanOldTransactions();
-        economySearchGUI.saveTransactionHistory(transactionsConfig);
+        EconomyGUI.getInstance().getEconomySearchGUI().cleanOldTransactions();
+        EconomyGUI.getInstance().getEconomySearchGUI().saveTransactionHistory(transactionsConfig);
         try {
             transactionsConfig.save(transactionsFile);
         } catch (IOException e) {
-            getLogger().severe("Failed to save transactions.yml: " + e.getMessage());
+            EconomyGUI.getInstance().getLogger().severe("Failed to save transactions.yml: " + e.getMessage());
         }
     }
+
     public String getMessage(String key) {
         if (messagesConfig == null) {
             return ChatColor.translateAlternateColorCodes('&', key);
@@ -75,6 +96,7 @@ public class MessageUtil {
         String msg = messagesConfig.getString(key, key);
         return ChatColor.translateAlternateColorCodes('&', msg);
     }
+
     public String getMessage(String key, String def) {
         if (messagesConfig == null) {
             return ChatColor.translateAlternateColorCodes('&', def);
@@ -82,6 +104,7 @@ public class MessageUtil {
         String msg = messagesConfig.getString(key, def);
         return ChatColor.translateAlternateColorCodes('&', msg);
     }
+
     public String getMessage(String key, String def, Object... placeholders) {
         String msg = getMessage(key, def);
         if (placeholders != null && placeholders.length >= 2 && placeholders.length % 2 == 0) {
