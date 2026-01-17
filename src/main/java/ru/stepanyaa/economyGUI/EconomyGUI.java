@@ -23,6 +23,7 @@
  * SOFTWARE.
  */
 package ru.stepanyaa.economyGUI;
+
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
@@ -36,6 +37,9 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 import net.milkbowl.vault.economy.Economy;
+import ru.stepanyaa.economyGUI.commands.EcoGuiCommand;
+import ru.stepanyaa.economyGUI.utils.CommonUtil;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -47,70 +51,106 @@ import java.util.stream.Collectors;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
-public class EconomyGUI extends JavaPlugin implements CommandExecutor, TabCompleter {
+
+import lombok.Getter;
+import lombok.Setter;
+
+public class EconomyGUI extends JavaPlugin {
+	@Getter
+	private static EconomyGUI instance;
+	@Getter
+	private CommonUtil common;
+	
+    public static final String CURRENT_VERSION = null;
+	
+	@Getter
     private Economy econ = null;
     private FileConfiguration messagesConfig;
     private FileConfiguration transactionsConfig;
     private File transactionsFile;
     private String language;
-    private static final String CURRENT_VERSION = "1.0.3";
     private EconomySearchGUI economySearchGUI;
+    @Getter
     private final Set<String> adminUUIDs = ConcurrentHashMap.newKeySet();
+    @Setter @Getter
     private String latestVersion = null;
+    
+    @Getter
     private boolean playerSelectionEnabled;
+    @Getter
     private boolean massOperationsEnabled;
+    @Getter
     private boolean quickActionsEnabled;
+    @Getter
     private boolean fullManagementEnabled;
+    
     public int transactionRetentionDays;
     private boolean isFirstEnable = true;
     private File messagesFile;
 
     @Override
     public void onEnable() {
+    	instance = this;
+    	CURRENT_VERSION = getDescription().getVersion();
         if (!setupEconomy()) {
             getLogger().severe(getMessage("warning.no-economy", "Economy provider not found! Disabling plugin."));
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
+        common = new CommonUtil();
+        
+        //CONFIG INIT
         saveDefaultConfig();
-        this.updateConfigFile();
+        common.updateConfigFile();
         reloadConfig();
+        
+        //CONFIG READ
         language = getConfig().getString("language", "en");
         playerSelectionEnabled = getConfig().getBoolean("features.player-selection", true);
         massOperationsEnabled = getConfig().getBoolean("features.mass-operations", true);
         quickActionsEnabled = getConfig().getBoolean("features.quick-actions", true);
         fullManagementEnabled = getConfig().getBoolean("features.full-management", true);
         transactionRetentionDays = getConfig().getInt("features.transaction-retention-days", 30);
+        
+        //MESSAGES
         loadMessages();
         if (messagesConfig == null) {
             getLogger().severe("Failed to load messages configuration. Disabling plugin.");
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
+        
+        //WARNING: FUCTION LIMITED
         if (!playerSelectionEnabled && !massOperationsEnabled && !quickActionsEnabled && !fullManagementEnabled) {
             getLogger().warning(getMessage("error.all-features-disabled", "All features are disabled in config! Commands will be limited."));
         }
+        
+        //ECONOMY GUI
         economySearchGUI = new EconomySearchGUI(this);
         getServer().getPluginManager().registerEvents(economySearchGUI, this);
+        
         loadTransactions();
         PluginCommand command = getCommand("economygui");
         if (command != null) {
-            command.setExecutor(this);
-            command.setTabCompleter(this);
-            command.setPermissionMessage(ChatColor.RED + getMessage("error.no-permission", "You don't have permission!"));
+            command.setExecutor(new EcoGuiCommand());
+            command.setTabCompleter(new EcoGuiCommand());
         } else {
             getLogger().warning("Failed to register command 'economygui'!");
         }
+        
+        
         adminUUIDs.addAll(getConfig().getStringList("admin-uuids"));
         getLogger().info(getMessage("warning.plugin-enabled", "EconomyGUI enabled with language: %lang%", "lang", language));
         checkForUpdates();
         this.isFirstEnable = false;
     }
+    
     @Override
     public void onDisable() {
         saveTransactions();
         getLogger().info("EconomyGUI disabled.");
     }
+    
     private boolean setupEconomy() {
         if (getServer().getPluginManager().getPlugin("Vault") == null) {
             return false;
@@ -122,155 +162,13 @@ public class EconomyGUI extends JavaPlugin implements CommandExecutor, TabComple
         econ = rsp.getProvider();
         return econ != null;
     }
-    public Economy getEconomy() {
-        return econ;
-    }
-
-    private void loadMessages() {
-        String messagesFileName = "messages_" + language + ".yml";
-        messagesFile = new File(getDataFolder(), messagesFileName);
-        try {
-            if (!messagesFile.exists()) {
-                if (getResource(messagesFileName) != null) {
-                    saveResource(messagesFileName, false);
-                    getLogger().info("Created messages file: " + messagesFileName);
-                } else {
-                    getLogger().warning("Messages file " + messagesFileName + " not found in plugin!");
-                    messagesConfig = new YamlConfiguration();
-                    return;
-                }
-            }
-            messagesConfig = YamlConfiguration.loadConfiguration(messagesFile);
-            String currentFileVersion = messagesConfig.getString("version", "0.0.0");
-            if (!currentFileVersion.equals(CURRENT_VERSION)) {
-                if (getResource(messagesFileName) != null) {
-                    File backupFile = new File(getDataFolder(), messagesFileName + ".backup");
-                    if (messagesFile.renameTo(backupFile)) {
-                        getLogger().info("Backed up old messages file to: " + messagesFileName + ".backup");
-                    }
-                    saveResource(messagesFileName, true);
-                    messagesConfig = YamlConfiguration.loadConfiguration(messagesFile);
-                    messagesConfig.set("version", CURRENT_VERSION);
-                    messagesConfig.save(messagesFile);
-                    getLogger().info("Updated messages file " + messagesFileName + " to version " + CURRENT_VERSION);
-                } else {
-                    getLogger().warning("Resource " + messagesFileName + " not found in plugin!");
-                }
-            } else if (isFirstEnable) {
-                getLogger().info("Messages file " + messagesFileName + " is up-to-date (version " + CURRENT_VERSION + ").");
-            }
-        } catch (Exception e) {
-            getLogger().severe("Failed to load messages file: " + e.getMessage());
-            messagesConfig = new YamlConfiguration();
-        }
-    }
-
-    private void loadTransactions() {
-        transactionsFile = new File(getDataFolder(), "transactions.yml");
-        if (!transactionsFile.exists()) {
-            try {
-                transactionsFile.createNewFile();
-                getLogger().info("Created transactions file: transactions.yml");
-            } catch (IOException e) {
-                getLogger().severe("Failed to create transactions.yml: " + e.getMessage());
-            }
-        }
-        transactionsConfig = YamlConfiguration.loadConfiguration(transactionsFile);
-        economySearchGUI.loadTransactionHistory(transactionsConfig);
-    }
-    public void saveTransactions() {
-        economySearchGUI.cleanOldTransactions();
-        economySearchGUI.saveTransactionHistory(transactionsConfig);
-        try {
-            transactionsConfig.save(transactionsFile);
-        } catch (IOException e) {
-            getLogger().severe("Failed to save transactions.yml: " + e.getMessage());
-        }
-    }
-    public String getMessage(String key) {
-        if (messagesConfig == null) {
-            return ChatColor.translateAlternateColorCodes('&', key);
-        }
-        String msg = messagesConfig.getString(key, key);
-        return ChatColor.translateAlternateColorCodes('&', msg);
-    }
-    public String getMessage(String key, String def) {
-        if (messagesConfig == null) {
-            return ChatColor.translateAlternateColorCodes('&', def);
-        }
-        String msg = messagesConfig.getString(key, def);
-        return ChatColor.translateAlternateColorCodes('&', msg);
-    }
-    public String getMessage(String key, String def, Object... placeholders) {
-        String msg = getMessage(key, def);
-        if (placeholders != null && placeholders.length >= 2 && placeholders.length % 2 == 0) {
-            for (int i = 0; i < placeholders.length; i += 2) {
-                String placeholder = placeholders[i].toString();
-                String value = placeholders[i + 1].toString();
-                msg = msg.replace("%" + placeholder + "%", value);
-            }
-        }
-        return ChatColor.translateAlternateColorCodes('&', msg);
-    }
-    @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player)) {
-            sender.sendMessage(ChatColor.RED + getMessage("error.player-only", "This command is for players only!"));
-            return true;
-        }
-        Player player = (Player) sender;
-        if (!player.hasPermission("economygui.admin") && !player.hasPermission("economygui.gui")) {
-            player.sendMessage(ChatColor.RED + getMessage("error.no-permission", "You don't have permission!"));
-            return true;
-        }
-        if (args.length == 0 || args[0].equalsIgnoreCase("gui")) {
-            if (args.length > 1) {
-                player.sendMessage(ChatColor.RED + getMessage("command.usage-gui", "Usage: /economygui gui"));
-                return true;
-            }
-            economySearchGUI.openLastGUIMenu(player);
-            return true;
-        } else if (args[0].equalsIgnoreCase("reload")) {
-            if (!player.hasPermission("economygui.reload")) {
-                player.sendMessage(ChatColor.RED + getMessage("error.no-permission", "You don't have permission!"));
-                return true;
-            }
-            if (args.length != 1) {
-                player.sendMessage(ChatColor.RED + getMessage("command.usage-reload", "Usage: /economygui reload"));
-                return true;
-            }
-            reloadPlugin(player);
-            return true;
-        } else if (args[0].equalsIgnoreCase("reset")) {
-            if (!player.hasPermission("economygui.reset")) {
-                player.sendMessage(ChatColor.RED + getMessage("error.no-permission", "You don't have permission!"));
-                return true;
-            }
-            if (args.length != 1) {
-                player.sendMessage(ChatColor.RED + getMessage("command.usage", "Usage: /economygui reset"));
-                return true;
-            }
-            economySearchGUI.resetSearch(player);
-            return true;
-        }
-        player.sendMessage(ChatColor.RED + getMessage("command.usage", "Usage: /economygui <gui | reload | reset>"));
-        return true;
-    }
-    @Override
-    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        if (args.length == 1) {
-            return Arrays.asList("gui", "reload", "reset").stream()
-                    .filter(cmd -> sender.hasPermission("economygui." + cmd) || sender.hasPermission("economygui.admin"))
-                    .collect(Collectors.toList());
-        }
-        return Collections.emptyList();
-    }
+    
     public void reloadPlugin(Player player) {
         reloadConfig();
         language = getConfig().getString("language", "en");
         loadMessages();
         loadTransactions();
-        updateConfigFile();
+        common.updateConfigFile();
         transactionRetentionDays = getConfig().getInt("features.transaction-retention-days", 30);
         playerSelectionEnabled = getConfig().getBoolean("features.player-selection", true);
         massOperationsEnabled = getConfig().getBoolean("features.mass-operations", true);
@@ -278,106 +176,5 @@ public class EconomyGUI extends JavaPlugin implements CommandExecutor, TabComple
         fullManagementEnabled = getConfig().getBoolean("features.full-management", true);
         economySearchGUI.refreshOpenGUIs();
         player.sendMessage(ChatColor.GREEN + getMessage("action.config-reloaded", "Configuration reloaded."));
-    }
-    private void checkForUpdates() {
-        Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
-            try {
-                URL url = new URL("https://api.modrinth.com/v2/project/economygui/version");
-                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                conn.setRequestMethod("GET");
-                conn.setRequestProperty("User-Agent", "EconomyGUI/" + CURRENT_VERSION);
-                conn.connect();
-                if (conn.getResponseCode() == 200) {
-                    JsonArray versions = JsonParser.parseReader(new InputStreamReader(conn.getInputStream())).getAsJsonArray();
-                    String highestVersion = null;
-                    for (JsonElement element : versions) {
-                        String versionNumber = element.getAsJsonObject().get("version_number").getAsString();
-                        String versionType = element.getAsJsonObject().get("version_type").getAsString();
-                        if (versionNumber.contains("-SNAPSHOT") && !versionType.equals("release")) {
-                            continue;
-                        }
-                        if (highestVersion == null || isNewerVersion(versionNumber, highestVersion)) {
-                            highestVersion = versionNumber;
-                        }
-                    }
-                    if (highestVersion != null && isNewerVersion(highestVersion, CURRENT_VERSION)) {
-                        String[] currentParts = CURRENT_VERSION.split("\\.");
-                        String[] highestParts = highestVersion.split("\\.");
-                        if (currentParts.length == 3 && highestParts.length == 3) {
-                            int currentMajor = Integer.parseInt(currentParts[0]);
-                            int currentMinor = Integer.parseInt(currentParts[1]);
-                            int currentPatch = Integer.parseInt(currentParts[2]);
-                            int highestMajor = Integer.parseInt(highestParts[0]);
-                            int highestMinor = Integer.parseInt(highestParts[1]);
-                            int highestPatch = Integer.parseInt(highestParts[2]);
-                            if (currentMajor == highestMajor && currentMinor == highestMinor && highestPatch == currentPatch + 1) {
-                                latestVersion = highestVersion;
-                                getLogger().warning("*** UPDATE AVAILABLE *** A new version of EconomyGUI (" + latestVersion + ") is available at:\nhttps://modrinth.com/plugin/economygui/versions");
-                            }
-                        }
-                    }
-                }
-                conn.disconnect();
-            } catch (Exception e) {
-                getLogger().warning("Failed to check for updates: " + e.getMessage());
-            }
-        });
-    }
-    private boolean isNewerVersion(String version1, String version2) {
-        String[] parts1 = version1.split("\\.");
-        String[] parts2 = version2.split("\\.");
-        for (int i = 0; i < Math.min(parts1.length, parts2.length); i++) {
-            int num1 = Integer.parseInt(parts1[i]);
-            int num2 = Integer.parseInt(parts2[i]);
-            if (num1 > num2) return true;
-            if (num1 < num2) return false;
-        }
-        return parts1.length > parts2.length;
-    }
-    private void updateConfigFile() {
-        File configFile = new File(getDataFolder(), "config.yml");
-        if (!configFile.exists()) {
-            saveResource("config.yml", false);
-            getLogger().info(getMessage("warning.config-file-create", "Created config file: config.yml"));
-        }
-        YamlConfiguration existingConfig = YamlConfiguration.loadConfiguration(configFile);
-        String currentFileVersion = existingConfig.getString("config-version", "0.0.0");
-        if (currentFileVersion.equals(CURRENT_VERSION)) {
-            if (isFirstEnable) {
-                getLogger().info(getMessage("warning.config-file-up-to-date", "Config file config.yml is up-to-date (version %version%).")
-                        .replace("%version%", CURRENT_VERSION));
-            }
-            return;
-        }
-        if (getResource("config.yml") != null) {
-            try {
-                saveResource("config.yml", true);
-                getLogger().info(getMessage("warning.config-file-updated", "Updated config.yml to version %version%.")
-                        .replace("%version%", CURRENT_VERSION));
-                YamlConfiguration newConfig = YamlConfiguration.loadConfiguration(configFile);
-                newConfig.set("config-version", CURRENT_VERSION);
-                newConfig.save(configFile);
-            } catch (Exception e) {
-                getLogger().warning("Failed to update config.yml: " + e.getMessage());
-            }
-        } else {
-            getLogger().warning(getMessage("warning.config-file-not-found", "Resource config.yml not found in plugin!"));
-        }
-    }
-
-    public boolean isPlayerSelectionEnabled() {
-        return playerSelectionEnabled;
-    }
-    public boolean isMassOperationsEnabled() {
-        return massOperationsEnabled;
-    }
-    public boolean isQuickActionsEnabled() {
-        return quickActionsEnabled;
-    }
-    public boolean isFullManagementEnabled() {
-        return fullManagementEnabled;
-    }
-    public Set<String> getAdminUUIDs() {
-        return adminUUIDs;
     }
 }
